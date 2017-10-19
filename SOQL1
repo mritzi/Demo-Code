@@ -1,0 +1,10 @@
+pdfInvoice = [Select Id, Name, Total_PDF_Amount__c,
+					(Select Invoice__c From Invoice_Allocation_Junctions__r
+						Where Allocation__r.Main_Allocation__c = TRUE AND
+						(Allocation__r.Department_Allocation__c = 'Residential - Development' OR Allocation__r.Department_Allocation__c = 'Residential - New Homes' OR Allocation__r.Department_Allocation__c = 'International Properties')
+					),
+					(Select Invoice__c From Invoice_Cost_Junctions__r
+					Where Disbursement__r.Category__c = 'Cost Flow Through (Residential only)')
+					From Invoice__c
+					Where Id =: selectedId
+				];
