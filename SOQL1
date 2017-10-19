@@ -8,3 +8,4 @@ pdfInvoice = [Select Id, Name, Total_PDF_Amount__c,
 					From Invoice__c
 					Where Id =: selectedId
 				];
+				//new code
