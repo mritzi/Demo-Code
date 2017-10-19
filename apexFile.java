@@ -15,7 +15,9 @@ public without sharing class CS_CompanyInformationPDFController_Long{
     public List<MeetingWrapper> lstMeetingWrapper{get;set;}
     public set<String> setDept{get;set;}
     public integer deptNo{get;set;}
+    public integer deptNoLast2FY{get;set;}
     public map<String,integer> mapDeptJObNo{get;set;}
+    public map<String,integer> mapDeptJObNoLastTwoFY{get;set;}
     public List<Account> lstAccountDisplay{get;set;}
     public List<Who_Knows_Who__c> lstWhoKnowsWho{get; set;}
     public List<OpportunityWrapper> lstOpportunityWrapperDisplay{get;set;}
@@ -47,9 +49,11 @@ public without sharing class CS_CompanyInformationPDFController_Long{
         lstWhoKnowsWho = new List<Who_Knows_Who__c>();
         lstMeeting = new List<Event>();
         deptNo = 0;
+        deptNoLast2FY = 0;
         ultimateParent ='N/A';
         setDept = new set<String>();
         mapDeptJObNo = new map<String,integer>();
+        mapDeptJObNoLastTwoFY = new map<String,integer>();
         lstAccountDisplayId = new List<id>();
         lstOpportunityWrapperDisplay = new List<OpportunityWrapper>();
         lstContactWrapperDisplay = new List<ContactWrapper>();
@@ -154,6 +158,7 @@ public without sharing class CS_CompanyInformationPDFController_Long{
                                                 Account.Name,
                                                 Date_Instructed__c,
                                                 StageName,
+                                                CloseDate,
                                                 Manager__c,
                                                 Manager__r.Name,
                                                 Manager__r.Department__c,
@@ -180,7 +185,6 @@ public without sharing class CS_CompanyInformationPDFController_Long{
                                                 From Opportunity
                                                 where AccountId in: lstAccountDisplayId
                                                 and StageName = 'Instructed'
-                                                and CloseDate >= LAST_FISCAL_YEAR
                                                 order by Date_Instructed__c desc Limit 1000];
                                                 
                 lstAccountContactRelationDisplay = [Select id,
@@ -201,7 +205,8 @@ public without sharing class CS_CompanyInformationPDFController_Long{
                 mapAccountOpportunity.get(objOppDisplayFinal.AccountId).add(objOppDisplayFinal);
                 
             }
-            
+            Integer orgFiscalMonth = [SELECT FiscalYearStartMonth FROM Organization].FiscalYearStartMonth;
+            Date orgFiscalYear = Date.newinstance(system.today().addYears(-1).year(), orgFiscalMonth, 1);
             for(id idAccountId: mapAccountOpportunity.keyset()){
                 
                 for(Opportunity objOppDisplay: mapAccountOpportunity.get(idAccountId)){
@@ -215,6 +220,16 @@ public without sharing class CS_CompanyInformationPDFController_Long{
                         }else{
                             mapDeptJObNo.put(objOppDisplay.Manager__r.Department__c, 1);
                         }
+                        if(objOppDisplay.CloseDate>= orgFiscalYear){
+                            deptNoLast2FY +=1;
+                            if(mapDeptJObNoLastTwoFY.containsKey(objOppDisplay.Manager__r.Department__c)){
+                                integer currentNo = mapDeptJObNoLastTwoFY.get(objOppDisplay.Manager__r.Department__c);
+                                currentNo += 1;
+                                mapDeptJObNoLastTwoFY.put(objOppDisplay.Manager__r.Department__c, currentNo);
+                            }else{
+                                mapDeptJObNoLastTwoFY.put(objOppDisplay.Manager__r.Department__c, 1);
+                            }
+                        }
                         
                     }else{
                         
@@ -225,7 +240,22 @@ public without sharing class CS_CompanyInformationPDFController_Long{
                         }else{
                             mapDeptJObNo.put('None', 1);
                         }
+                        if(mapDeptJObNoLastTwoFY.containsKey('None')){
+                            integer currentNone = mapDeptJObNoLastTwoFY.get('None');
+                            currentNone += 1;
+                            mapDeptJObNoLastTwoFY.put('None', currentNone);
+                        }else{
+                            mapDeptJObNoLastTwoFY.put('None', 1);
+                        }
                     }
+                    if(!mapDeptJObNo.isEmpty()){
+                        for(String ObjString : mapDeptJObNo.keyset()){
+                            if(!mapDeptJObNoLastTwoFY.containsKey(ObjString)){
+                                mapDeptJObNoLastTwoFY.put(ObjString,0);
+                            }
+                        }
+                    }
+                    
                     String propAdd = 'None';
                     if(!objOppDisplay.Job_Property_Junction__r.isEmpty()){
                         if(objOppDisplay.Job_Property_Junction__r.size() > 1){
@@ -458,6 +488,8 @@ public without sharing class CS_CompanyInformationPDFController_Long{
         }
         
     }
+    
+   
     
     public class OpportunityWrapper{
         public Opportunity objOpportunityToDisplay{get;set;}
