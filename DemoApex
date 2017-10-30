@@ -15,6 +15,7 @@
 */
 global with sharing class CS_JobInvoiceController{
 
+	@testVisible
 	private string strOpportunityID;
 	public  List<Opportunity> lstOpportunity{get;set;}
 	transient Schema.DescribeFieldResult fieldResultPOStatusP =  Purchase_Order__c.PO_Status__c.getDescribe();
@@ -102,6 +103,7 @@ global with sharing class CS_JobInvoiceController{
 		//by default PDf tab will be hidden
 		showPDFTab = pdfTabFailed =  pdfTabSuccess = false;
 		pdfTabMessage = '';
+		pdfAmountTotal = 0.00;
 		pdfInvoice = new Invoice__c();
 		initInvoice();
 	}
@@ -2820,6 +2822,61 @@ global with sharing class CS_JobInvoiceController{
 
 
 	}
+	/*
+	Public void refreshVar(){
+		lstPurchaseOrderInvoiceToInsert = new List<Purchase_Order_Invoice_Junction__c>();
+		lstPurchaseOrderInvoiceToDel  = new List<Purchase_Order_Invoice_Junction__c>();
+		mapPurchaseOrderJunctionInsertDel = new map<id, Purchase_Order_Invoice_Junction__c>();
+		isPOChanged = false;
+		isactiveinvoice = true;
+		objModalWrapper = new ModalWrapper();
+		invoicePayment = new Invoice_Payment__c();
+		displayPayment=false;
+		strOpportunityID ='';
+		selectedId = '';
+		lstOpportunity = new List<Opportunity>();
+		objOpportunity = new Opportunity();
+		lstInvoice= new List<Invoice__c>();
+		objInvoiceDetailsWrapper = new InvoiceDetailsWrapper();
+		lstPurchaseOrderWrapper = new List<PurchaseOrderWrapper>();
+		lstForeCastWrapper = new List<ForeCastWrapper>();
+		objModalWrapper = new ModalWrapper();
+		objJobDetailsWrapper = new JobDetailsWrapper();
+		finalizejobFlag=false;
+
+		//by default PDf tab will be hidden
+		showPDFTab = pdfTabFailed =  pdfTabSuccess = false;
+		pdfTabMessage = '';
+		pdfAmountTotal = 0.00;
+		pdfInvoice = new Invoice__c();
+
+
+		feesList = new List<Invoice_Line_Item__c>();
+		costsList = new List<Invoice_Line_Item__c>();
+
+		lstPurchaseOrderInvoiceToInsert = new List<Purchase_Order_Invoice_Junction__c>();
+		lstPurchaseOrderInvoiceToDel  = new List<Purchase_Order_Invoice_Junction__c>();
+		mapPurchaseOrderJunctionInsertDel = new map<id, Purchase_Order_Invoice_Junction__c>();
+		invoicePayment = new Invoice_Payment__c();
+		displayPayment=false;
+		isactiveinvoice = true;
+		strOpportunityID ='';
+		selectedId = '';
+		lstOpportunity = new List<Opportunity>();
+		objOpportunity = new Opportunity();
+		lstInvoice= new List<Invoice__c>();
+		objInvoiceDetailsWrapper = new InvoiceDetailsWrapper();
+		lstPurchaseOrderWrapper = new List<PurchaseOrderWrapper>();
+		lstForeCastWrapper = new List<ForeCastWrapper>();
+		objModalWrapper = new ModalWrapper();
+		objJobDetailsWrapper = new JobDetailsWrapper();
+		listOfInvoiceLineItem = new List < Invoice_Line_Item__c > ();
+		isPOChanged = false;
+		Breakdown=true;
+		Category='Breakdown';
+		lstOfbooleanCostWrapper = new List < booleanCostWrapper > ();
+	}
+	*/
 	public void updateVatCalculations()
 	{
 		// saveall();
@@ -2889,6 +2946,12 @@ global with sharing class CS_JobInvoiceController{
 	// }
 	// }
 
+	/**
+	*   Method Name: updatePDFValues
+	*   Description: D-0450, when user changes values from PDF VALUES tab, it gets updated in the respective records
+	*   Param: none
+	*   Return: true|false
+	*/
 	Public Boolean updatePDFValues(){
 		if(pdfInvoice.Total_PDF_Amount__c == pdfAmountTotal){
 			//re-retreive new Invoice Line Items related to selected Invoice
@@ -3157,7 +3220,61 @@ global with sharing class CS_JobInvoiceController{
 		//invoicePayment.Amount__c=objInvoice.Payment_Balance__c;
 
 	}
+	/*
+	public void refreshVars(){
+		lstPurchaseOrderInvoiceToInsert = new List<Purchase_Order_Invoice_Junction__c>();
+		lstPurchaseOrderInvoiceToDel  = new List<Purchase_Order_Invoice_Junction__c>();
+		mapPurchaseOrderJunctionInsertDel = new map<id, Purchase_Order_Invoice_Junction__c>();
+		isPOChanged = false;
+		isactiveinvoice = true;
+		objModalWrapper = new ModalWrapper();
+		invoicePayment = new Invoice_Payment__c();
+		displayPayment=false;
+		strOpportunityID ='';
+		selectedId = '';
+		lstOpportunity = new List<Opportunity>();
+		objOpportunity = new Opportunity();
+		lstInvoice= new List<Invoice__c>();
+		objInvoiceDetailsWrapper = new InvoiceDetailsWrapper();
+		lstPurchaseOrderWrapper = new List<PurchaseOrderWrapper>();
+		lstForeCastWrapper = new List<ForeCastWrapper>();
+		objModalWrapper = new ModalWrapper();
+		objJobDetailsWrapper = new JobDetailsWrapper();
+		finalizejobFlag=false;
 
+		//by default PDf tab will be hidden
+		showPDFTab = pdfTabFailed =  pdfTabSuccess = false;
+		pdfTabMessage = '';
+		pdfAmountTotal = 0.00;
+		pdfInvoice = new Invoice__c();
+
+
+		feesList = new List<Invoice_Line_Item__c>();
+		costsList = new List<Invoice_Line_Item__c>();
+
+		lstPurchaseOrderInvoiceToInsert = new List<Purchase_Order_Invoice_Junction__c>();
+		lstPurchaseOrderInvoiceToDel  = new List<Purchase_Order_Invoice_Junction__c>();
+		mapPurchaseOrderJunctionInsertDel = new map<id, Purchase_Order_Invoice_Junction__c>();
+		invoicePayment = new Invoice_Payment__c();
+		displayPayment=false;
+		isactiveinvoice = true;
+		strOpportunityID ='';
+		selectedId = '';
+		lstOpportunity = new List<Opportunity>();
+		objOpportunity = new Opportunity();
+		lstInvoice= new List<Invoice__c>();
+		objInvoiceDetailsWrapper = new InvoiceDetailsWrapper();
+		lstPurchaseOrderWrapper = new List<PurchaseOrderWrapper>();
+		lstForeCastWrapper = new List<ForeCastWrapper>();
+		objModalWrapper = new ModalWrapper();
+		objJobDetailsWrapper = new JobDetailsWrapper();
+		listOfInvoiceLineItem = new List < Invoice_Line_Item__c > ();
+		isPOChanged = false;
+		Breakdown=true;
+		Category='Breakdown';
+		lstOfbooleanCostWrapper = new List < booleanCostWrapper > ();
+	}
+	*/
 	public void unpayInvoice()
 	{
 		try
