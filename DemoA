@@ -15,6 +15,7 @@
 */
 global with sharing class CS_JobInvoiceController{
 
+	@testVisible
 	private string strOpportunityID;
 	public  List<Opportunity> lstOpportunity{get;set;}
 	transient Schema.DescribeFieldResult fieldResultPOStatusP =  Purchase_Order__c.PO_Status__c.getDescribe();
@@ -102,6 +103,7 @@ global with sharing class CS_JobInvoiceController{
 		//by default PDf tab will be hidden
 		showPDFTab = pdfTabFailed =  pdfTabSuccess = false;
 		pdfTabMessage = '';
+		pdfAmountTotal = 0.00;
 		pdfInvoice = new Invoice__c();
 		initInvoice();
 	}
@@ -2820,6 +2822,7 @@ global with sharing class CS_JobInvoiceController{
 
 
 	}
+	
 	public void updateVatCalculations()
 	{
 		// saveall();
@@ -2889,6 +2892,12 @@ global with sharing class CS_JobInvoiceController{
 	// }
 	// }
 
+	/**
+	*   Method Name: updatePDFValues
+	*   Description: D-0450, when user changes values from PDF VALUES tab, it gets updated in the respective records
+	*   Param: none
+	*   Return: true|false
+	*/
 	Public Boolean updatePDFValues(){
 		if(pdfInvoice.Total_PDF_Amount__c == pdfAmountTotal){
 			//re-retreive new Invoice Line Items related to selected Invoice
