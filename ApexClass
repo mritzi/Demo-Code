@@ -1,0 +1,3429 @@
+/**
+*  Class Name:  CS_JobInvoiceController
+*  Description: This is a class to edit all invoice related to the jobs
+*  Company: dQuotient
+*  CreatedDate: 27/09/2016
+*
+*  Modification Log
+*  -----------------------------------------------------------
+*  Developer      Modification Date      Comments
+*  -----------------------------------------------------------
+*  Hemant garg      27/09/2016            Orginal Version
+*  Anand M          17/11/2016            Changes for Fixes
+*  M Rizwan			13/10/2017			  Changes for "PDF Values" Tab
+*
+*/
+global with sharing class CS_JobInvoiceController{
+
+	private string strOpportunityID;
+	public  List<Opportunity> lstOpportunity{get;set;}
+	transient Schema.DescribeFieldResult fieldResultPOStatusP =  Purchase_Order__c.PO_Status__c.getDescribe();
+	transient List<Schema.PicklistEntry> lstSchemaPicklistPOStatusP = fieldResultPOStatusP.getPicklistValues();
+	Public String Category{get;set;}
+	public Opportunity objOpportunity{get;set;}
+	public List<Invoice__c> lstInvoice{get;set;}
+	public InvoiceDetailsWrapper objInvoiceDetailsWrapper{get;set;}
+	public JobDetailsWrapper objJobDetailsWrapper{get;set;}
+	public String selectedId{get;set;}
+	public List<PurchaseOrderWrapper> lstPurchaseOrderWrapper{get;set;}
+	public List<ForeCastWrapper> lstForeCastWrapper{get;set;}
+	public String strForeCastWrapper{get;set;}
+	public boolean isactiveinvoice;
+	public ModalWrapper objModalWrapper{get;set;}
+	public integer selectedPOIndex{get;set;}
+	public integer selectedForecastIndex{get;set;}
+	public boolean isJobClosed {get; set;}
+	private List<Purchase_Order_Invoice_Junction__c> lstPurchaseOrderInvoiceToInsert;
+	private List<Purchase_Order_Invoice_Junction__c> lstPurchaseOrderInvoiceToDel;
+	private map<id, Purchase_Order_Invoice_Junction__c> mapPurchaseOrderJunctionInsertDel;
+	private boolean isPOChanged;
+	public List<Invoice_Line_Item__c> listOfInvoiceLineItem{get;set;}
+	public String strInvoiceLineItem{get;set;}
+	Public List<Disbursements__c> toAddCost{get;set;}
+	public List<booleanCostWrapper> lstOfbooleanCostWrapper{get;set;}
+	public String  strbooleanCostWrapper{get;set;}
+	Public List<Invoice_Line_Item__c> LstBreakdown{get;set;}
+	Public List<Invoice_Line_Item__c> LstCategry{get;set;}
+	Public List<Invoice_Line_Item__c> LstSummery{get;set;}
+	// Public List<CostCategoryWrapper> LstCostCategoryWrapper{get;set;}
+	Public Boolean Breakdown{get;set;}
+	Public Boolean Categry{get;set;}
+	Public boolean summery{get;set;}
+	Public String strBreakdown{get;set;}
+	Public String strCategry{get;set;}
+	Public String strSummery{get;set;}
+	Public String pdfPageURLString{get;set;}
+	Public String newCostString{get;set;}
+	Public String archiveId{get;set;}
+	public String costType{get;set;}
+	public boolean disableAllo{get;set;}
+	public Invoice_Payment__c invoicePayment{get;set;}
+	public  LIst<Invoice_Line_Item__c> lstLinItem;
+	public boolean displayPayment{get;set;}
+	public String invoiceFInalStr{get;set;}
+
+	//variables added for PDF Values table
+	Public Boolean showPDFTab{get;set;}
+	Public Boolean pdfTabSuccess{get;set;}
+	Public Boolean pdfTabFailed{get;set;}
+	Public String pdfTabMessage{get;set;}
+	Public Invoice__c pdfInvoice{get;set;}
+	Public Double pdfAmountTotal{get;set;}
+	Public List<Invoice_Line_Item__c> feesList{get;set;}
+	Public List<Invoice_Line_Item__c> costsList{get;set;}
+
+	/**
+	*   Method Name: CS_JobInvoiceController
+	*   Description: Constructor for CS_JobInvoiceController
+	*   Param: None
+	*   Return: None
+	*/
+	public CS_JobInvoiceController() {
+		lstPurchaseOrderInvoiceToInsert = new List<Purchase_Order_Invoice_Junction__c>();
+		lstPurchaseOrderInvoiceToDel  = new List<Purchase_Order_Invoice_Junction__c>();
+		mapPurchaseOrderJunctionInsertDel = new map<id, Purchase_Order_Invoice_Junction__c>();
+		isPOChanged = false;
+		isactiveinvoice = true;
+		objModalWrapper = new ModalWrapper();
+		invoicePayment = new Invoice_Payment__c();
+		displayPayment=false;
+		strOpportunityID ='';
+		selectedId = '';
+		lstOpportunity = new List<Opportunity>();
+		objOpportunity = new Opportunity();
+		lstInvoice= new List<Invoice__c>();
+		objInvoiceDetailsWrapper = new InvoiceDetailsWrapper();
+		lstPurchaseOrderWrapper = new List<PurchaseOrderWrapper>();
+		lstForeCastWrapper = new List<ForeCastWrapper>();
+		objModalWrapper = new ModalWrapper();
+		objJobDetailsWrapper = new JobDetailsWrapper();
+		finalizejobFlag=false;
+
+		//by default PDf tab will be hidden
+		showPDFTab = pdfTabFailed =  pdfTabSuccess = false;
+		pdfTabMessage = '';
+		pdfInvoice = new Invoice__c();
+		initInvoice();
+	}
+
+	public void initInvoice(){
+		//initialize feesList & costsList as Well
+		feesList = new List<Invoice_Line_Item__c>();
+		costsList = new List<Invoice_Line_Item__c>();
+
+		lstPurchaseOrderInvoiceToInsert = new List<Purchase_Order_Invoice_Junction__c>();
+		lstPurchaseOrderInvoiceToDel  = new List<Purchase_Order_Invoice_Junction__c>();
+		mapPurchaseOrderJunctionInsertDel = new map<id, Purchase_Order_Invoice_Junction__c>();
+		invoicePayment = new Invoice_Payment__c();
+		displayPayment=false;
+		isactiveinvoice = true;
+		strOpportunityID ='';
+		selectedId = '';
+		lstOpportunity = new List<Opportunity>();
+		objOpportunity = new Opportunity();
+		lstInvoice= new List<Invoice__c>();
+		objInvoiceDetailsWrapper = new InvoiceDetailsWrapper();
+		lstPurchaseOrderWrapper = new List<PurchaseOrderWrapper>();
+		lstForeCastWrapper = new List<ForeCastWrapper>();
+		objModalWrapper = new ModalWrapper();
+		objJobDetailsWrapper = new JobDetailsWrapper();
+		listOfInvoiceLineItem = new List < Invoice_Line_Item__c > ();
+		isPOChanged = false;
+		Breakdown=true;
+		Category='Breakdown';
+		lstOfbooleanCostWrapper = new List < booleanCostWrapper > ();
+		//  toAddCost = new List < Disbursements__c > ();
+		lstBreakdown = new List < Invoice_Line_Item__c > ();
+		List<Profile> PROFILEList = [SELECT Id, Name FROM Profile WHERE Id=:userinfo.getProfileId() LIMIT 1];
+		if(PROFILEList[0].Name.equalsIgnoreCase('System Administrator') ||PROFILEList[0].Name.equalsIgnoreCase('CS_UK Finance'))
+		{
+			displayPayment=true;
+		}
+
+		if(ApexPages.currentPage().getParameters().containsKey('id')){
+			strOpportunityID = ApexPages.currentPage().getParameters().get('id');
+			if(!String.isBlank(strOpportunityID)){
+				strOpportunityID = String.escapeSingleQuotes(strOpportunityID);
+				if(strOpportunityID InstanceOf Id){
+
+					// Fetching Details From the JOb
+					lstOpportunity = [select id,Name,
+					IsWon ,
+					isClosed ,
+					Manager__c,
+					MLR_Required__c,
+					Engagement_Letter__c,
+					Engagement_Letter_Sent_Date__c,
+					StageName,
+					Coding_Structure__r.Status__c,
+					Invoicing_Address__c,
+					Invoicing_Address__r.name,
+					Invoicing_Address_Formula__c,
+					Invoicing_Address__r.Building__c,
+					Invoicing_Address__r.Street__c,
+					Invoicing_Address__r.Town__c,
+					Total_Amount_Paid_Ex_VAT__c,
+					Relates_To__c,
+					Total_Invoice_Area__c,
+					Total_Property_Area_sqft__c ,
+					Instructing_Company__c,
+					Instructing_Contact__c,
+					Total_Property_Area__c,
+					Job_Number__c,
+					Accountid,
+					Account.Name,
+					Account.MLR_Id__c,
+					Account.Valid_MLR__c,
+					Account.MLR_Id__r.Name,
+					Account.PO_Required__c,
+					Account.Company_Status__c,
+					Invoice_Contact__c,
+					Invoice_Contact__r.name,
+					createdbyId,
+					Invoicing_Company__c,
+					Invoicing_Company2__c,
+					Invoicing_Company2__r.name,
+					Invoicing_Company2__r.MLR_Id__c,
+					Invoicing_Company2__r.Valid_MLR__c,
+					Invoicing_Company2__r.MLR_Id__r.Name,
+					Invoicing_Company2__r.PO_Required__c,
+					Invoicing_Company2__r.Company_Status__c,
+					Invoicing_Care_Of__c,
+					Invoicing_Care_Of__r.Client__c,
+					Invoicing_Care_Of__r.Client__r.MLR_Id__c,
+					Invoicing_Care_Of__r.Client__r.Valid_MLR__c,
+					Invoicing_Care_Of__r.Client__r.MLR_Id__r.Name,
+					Invoicing_Care_Of__r.Client__r.Company_Status__c,
+					Invoicing_Care_Of__r.Client__r.PO_Required__c,
+					Amount,
+					Manager__r.name,
+					(select Id, Company__c,
+					name,Care_Of_Information__c,
+					Company__r.name,
+					Care_Of_Information__r.name,
+					Care_Of_Information__r.Care_of_Company_Name_Full__c,
+					Contact__r.name,
+					Invoice_contact__c,
+					Invoice_contact__r.Name,
+					Final_Invoice__c,
+					Date_of_Invoice__c,
+					Job_Title_From_Job__c,
+					Manager__r.name,
+					Contact__c,
+					Amount_Inc_VAT__c,
+					Total_Fee__c,
+					Total_cost__c,
+					status__c,
+					Property_Type__c,
+					FE_Write_Of_Created_Date__c,
+					is_International__c,
+					Payable_By__c,
+					Opportunity__r.Invoicing_Company2__r.name,
+					createdDate ,
+					IsEngagementC__c,
+					IsDeliverySer__c,
+					IsPrice__c,
+					Assigned_Invoice_Number__c,Description__c,
+					Invoice_Currency__c,
+					Foreign_Country__c,
+					Vat_Reg_No__c,disableinvoice__c,
+					File_Reference__c,
+					Payment_Charges__c,
+					Reason_to_Unpay__c,
+					Total_amount__c,Total_Amount_Inc_Vat__c,OriginalInvoicePrinted__c
+
+
+					from
+					Invoice_History__r
+					where Status__c != 'Archived'
+
+					order by CreatedDate desc LIMIT 100),
+					(Select Description__c,
+					Category__c,
+					Sub_Category__c,
+					status__c,
+					VAT_Applicable__c,
+					Created_For__c,
+					Created_For__r.name,
+					Recharge_Cost__c,
+					Purchase_Date__c
+					from
+					Disbursements__r ),
+					(Select id,name
+					From MLR__r),
+					(Select id, Name,
+					Amount__c,
+					Job__c,
+					BalanceAmount__c,
+					PO_Status__c
+					from
+					Purchase_Orders__r )
+					from Opportunity where id =: strOpportunityID limit 1];
+
+					if(!lstOpportunity.isEmpty()){
+
+						objOpportunity = lstOpportunity[0];
+						related = objOpportunity.Relates_To__c;
+						if(objOpportunity.Coding_Structure__r.Status__c != null && String.isNotBlank(objOpportunity.Coding_Structure__r.Status__c)){
+							if(objOpportunity.Coding_Structure__r.Status__c == 'Active'){
+								isactiveinvoice = true;
+							}else{
+								isactiveinvoice = false;
+							}
+						}else{
+							isactiveinvoice = false;
+						}
+						if(objOpportunity.Total_Property_Area_sqft__c != null){
+							TotalArea = objOpportunity.Total_Property_Area_sqft__c  ;
+						}else{
+							TotalArea = 0.00;
+						}
+						if(objOpportunity.Total_Invoice_Area__c != null){
+							TotalInvoicedArea = objOpportunity.Total_Invoice_Area__c;
+						}else{
+							TotalInvoicedArea = 0.00;
+						}
+
+						// Exsiting Invoices of the Job
+						if(objOpportunity.Invoice_History__r != null){
+							lstInvoice.addAll(objOpportunity.Invoice_History__r);
+						}
+
+
+						isJobClosed = objOpportunity.isClosed;
+						if(objOpportunity.StageName=='Closed Won')
+						isJobClosed=true;
+
+						for(Invoice__c invo :lstInvoice )
+						{
+							if(invo.Final_Invoice__c)
+							{
+								if(isJobClosed)
+								{
+									invoiceFInalStr='Final Invoice (Invoice #'+ invo.Assigned_Invoice_Number__c+' ) already created ';
+
+								}
+								else
+								invoiceFInalStr='Final draft Invoice already created ';
+
+								isJobClosed=true;
+								break;
+							}
+						}
+						//}
+
+						if(objOpportunity.Invoicing_Company2__c != null){
+							if(objOpportunity.Invoicing_Company2__r.Valid_MLR__c){
+								objJobDetailsWrapper.hasMLR = true;
+								objJobDetailsWrapper.linkMLR = objOpportunity.Invoicing_Company2__r.MLR_Id__c;
+								objJobDetailsWrapper.nameMLR = objOpportunity.Invoicing_Company2__r.MLR_Id__r.Name;
+							}
+
+							if(objOpportunity.Invoicing_Company2__r.PO_Required__c != null && objOpportunity.Invoicing_Company2__r.PO_Required__c == 'Yes'){
+								objJobDetailsWrapper.hasPO = true;
+							}
+
+						}else if(objOpportunity.Invoicing_Care_Of__c != null && objOpportunity.Invoicing_Care_Of__r.Client__c != null){
+							if(objOpportunity.Invoicing_Care_Of__r.Client__r.Valid_MLR__c){
+								objJobDetailsWrapper.hasMLR = true;
+								objJobDetailsWrapper.linkMLR = objOpportunity.Invoicing_Care_Of__r.Client__r.MLR_Id__c;
+								objJobDetailsWrapper.nameMLR = objOpportunity.Invoicing_Care_Of__r.Client__r.MLR_Id__r.Name;
+							}
+
+							if(objOpportunity.Invoicing_Care_Of__r.Client__r.PO_Required__c != null && objOpportunity.Invoicing_Care_Of__r.Client__r.PO_Required__c == 'Yes'){
+								objJobDetailsWrapper.hasPO = true;
+							}
+						}
+
+
+
+						// if(!objOpportunity.Purchase_Orders__r.isEmpty()){
+
+						// }
+
+						if(!String.isBlank(objOpportunity.Invoicing_Company2__c) && !String.isBlank(objOpportunity.Invoicing_Address__c)){
+							List<Account_Address_Junction__c> lstAddressJunction = new List<Account_Address_Junction__c>();
+							lstAddressJunction = [Select id, name,
+							Account__c,
+							Address__c,
+							Account_ID__c
+							From
+							Account_Address_Junction__c
+							where Address__c = :objOpportunity.Invoicing_Address__c AND Account__c = :objOpportunity.Invoicing_Company2__c Limit 1];
+
+							if(!lstAddressJunction.isEmpty()){
+								if(!String.isBlank(lstAddressJunction[0].Account_ID__c))
+								objJobDetailsWrapper.hasAccountId =true;
+							}
+						}
+
+					}
+
+
+				}
+			}
+		}
+		cancelInvoicechanges();
+	}
+
+
+	public void cancelInvoicechanges()
+	{   if(objInvoiceDetailsWrapper != null ){
+			objInvoiceDetailsWrapper.displayInvoiceInformation=false;
+			objInvoiceDetailsWrapper.displayButtonGroup=false;
+		}
+
+	}
+
+	public void refreshAll(){
+
+
+
+		try{
+			if(!String.isBlank(strOpportunityID) && objOpportunity != null){
+
+
+
+				lstInvoice= new List<Invoice__c>();
+				lstInvoice = [Select Id, Name,
+				Company__c,
+
+				Company__r.name,
+				Invoice_contact__c,
+				Invoice_contact__r.Name,
+				Care_Of_Information__c,
+				Care_Of_Information__r.name,
+				Care_Of_Information__r.Care_of_Company_Name_Full__c,
+				Contact__r.name,
+				Final_Invoice__c,
+				Date_of_Invoice__c,
+				Job_Title_From_Job__c,
+				Manager__r.name,
+				Contact__c,
+				Amount_Inc_VAT__c,
+				Total_Fee__c,
+				Total_cost__c,
+				status__c,
+				Property_Type__c,
+				FE_Write_Of_Created_Date__c,
+				IsEngagementC__c,
+				IsDeliverySer__c,
+				IsPrice__c,
+				Payable_By__c,
+				is_International__c,
+				File_Reference__c,
+				Opportunity__c,
+				createdDate,
+				CreatedById,
+				CreatedBy.Name,
+				Invoice_Address__c,
+				Description__c,
+				Invoice_Wording__c,
+				VAT__c,
+				Opportunity__r.Invoicing_Company2__r.name,
+				Assigned_Invoice_Number__c,
+				Invoice_Currency__c,
+				Foreign_Country__c,
+				Vat_Reg_No__c,
+				Payment_Charges__c,
+				Reason_to_Unpay__c,
+				Total_amount__c,Total_Amount_Inc_Vat__c,OriginalInvoicePrinted__c
+				from
+				Invoice__c
+				where Opportunity__c =: strOpportunityID and  Status__c != 'Archived'
+				order by CreatedDate desc];
+
+
+				selectedInvoiceDetails();
+				objModalWrapper = new ModalWrapper();
+			}
+			else{
+				objModalWrapper =new ModalWrapper('displayEngagementLetterModal',true);
+			}
+
+		}catch(DMLException e){
+			String errorMsg = e.getMessage();
+			if(errorMsg.contains('FIELD_CUSTOM_VALIDATION_EXCEPTION')){
+				errorMsg = errorMsg.substringBetween('FIELD_CUSTOM_VALIDATION_EXCEPTION, ', ': ');
+			}else if(errorMsg.contains('FIELD_FILTER_VALIDATION_EXCEPTION')){
+				errorMsg = errorMsg.substringBetween('FIELD_FILTER_VALIDATION_EXCEPTION, ', ': ');
+			}
+			objModalWrapper = new ModalWrapper(errorMsg);
+
+		}
+	}
+	//
+	Public Decimal TotalArea{get;set;}
+	Public Decimal TotalInvoicedArea{get;set;}
+	// Boolean to deal with Assign Number Modal
+	public boolean isModal{get;set;}
+	//
+	public boolean IsAssignedId{get;set;}
+	//
+	public boolean isError{get;set;}
+	//
+	//
+	public boolean tofinal;
+	public string related{get;set;}
+	//
+	public boolean IsAssignBtn{get;set;}
+	//
+	public boolean PropertyDetails{get;set;}
+	//
+	public boolean IsPdf{get;set;}
+	public boolean errorOnSave;
+	public boolean finalizejobFlag;
+	// Logic for Assign Number Validation and Modal
+
+	public void AssignNumberModal(){
+		errorOnSave=false;
+		saveAll();
+		if(errorOnSave)
+		{
+			return;
+		}
+		Savepoint sp = Database.setSavepoint();
+		Decimal jobAmt;
+		boolean checkMLR = true;
+		boolean checkPO = true;
+		System.debug('---MLRRequired->'+objOpportunity.MLR_Required__c);
+		if(objJobDetailsWrapper!=NULL)
+		System.debug('-hasMLR--->'+objJobDetailsWrapper.hasMLR);
+		List<Purchase_Order_Invoice_Junction__c> lstPurchaseOrderInvoice = new List<Purchase_Order_Invoice_Junction__c>();
+		List<Invoice_Allocation_Junction__c> lstAllocationInvoice = new List<Invoice_Allocation_Junction__c>();
+		List<Invoice_Cost_Junction__c> lstInvoiceCost = new List<Invoice_Cost_Junction__c>();
+		if(!String.isBlank(selectedId)){
+			// lstInvoiceCost =    [select id, Disbursement__c,
+			// Invoice__c
+			// from Invoice_Cost_Junction__c where Invoice__c=:selectedid limit 49999];
+
+			// lstAllocationInvoice =  [Select id, name,
+			// Allocation__c,
+			// Amount__c,
+			// Forecasting__c,
+			// International_Amount__c,
+			// Invoice__c,
+			// Master_Amount__c
+			// From
+			// Invoice_Allocation_Junction__c
+			// where
+			// Invoice__c = : selectedId and Forecasting__c != null limit 49999];
+
+			// if(lstInvoiceCost.isEmpty() && lstAllocationInvoice.isEmpty()){
+			// objModalWrapper = new ModalWrapper('There are no Allocations/Cost with this Invoice.');
+			// }
+			if(objJobDetailsWrapper != null ){
+				lstPurchaseOrderInvoice = [Select id, name,
+				Invoice__c,
+				Purchase_Order__c,Amount_Paid__c,
+				Purchase_Order__r.BalanceAmount__c,
+				Purchase_Order__r.PO_Status__c
+				From
+				Purchase_Order_Invoice_Junction__c
+				where Invoice__c =: selectedId];
+				system.debug('LoggingLevel logLevel'+selectedId);
+				system.debug('LoggingLevel logLevel'+lstPurchaseOrderInvoice);
+				if(lstPurchaseOrderInvoice.isEmpty()){
+					if( objJobDetailsWrapper.hasPO){
+						objModalWrapper = new ModalWrapper('There are no Purchase Orders associated with this Invoice.');
+					}else{
+						if(objInvoiceDetailsWrapper.totalGrossAmountNew<=0){
+							objModalWrapper = new ModalWrapper('Please raise an invoice with amount greater than zero');
+						}else{
+							if(objOpportunity != null && objJobDetailsWrapper != null && objOpportunity.MLR_Required__c  && (!objJobDetailsWrapper.hasMLR)){
+								if(objInvoiceDetailsWrapper != null && objInvoiceDetailsWrapper.objInvoiceToDisplay != null){
+									Invoice__c objInvoiceToUpdateMLR = new Invoice__c();
+									objInvoiceToUpdateMLR = objInvoiceDetailsWrapper.objInvoiceToDisplay;
+									objInvoiceToUpdateMLR.toSendeMLRMail__c = true;
+									try{
+										checkRecursiveInvoice.run = true;
+										update objInvoiceToUpdateMLR;
+										checkRecursiveInvoice.run = true;
+									}catch(exception e){
+										System.debug('---->'+e.getMessage());
+										Database.rollback( sp );
+									}
+
+								}
+
+								objModalWrapper = new ModalWrapper('You need a valid MLR before you can finalise an invoice in this job 1.');
+
+							}else{
+								boolean flaglinetemp=false;
+								if(lstForeCastWrapper!=null)
+								{
+									for(Integer i=0;i<lstForeCastWrapper.size();i++)
+									{
+										if(lstForeCastWrapper[i].isSelected)
+										{
+											flaglinetemp=true;
+										}
+
+									}
+								}
+
+								if(flaglinetemp)
+								objModalWrapper =new ModalWrapper('displayAssignNumberStep1',true);
+								else
+								{
+									ThirdModal();
+									objModalWrapper =new ModalWrapper('displayAssignNumberStep1',false);
+									objModalWrapper =new ModalWrapper('displayAssignNumberStep3',true);
+								}
+
+								//  objModalWrapper =new ModalWrapper('displayAssignNumberStep1',true);
+							}
+						}
+
+					}
+
+				}
+				else if(objInvoiceDetailsWrapper.totalGrossAmountNew<=0)
+				{
+					objModalWrapper = new ModalWrapper('Please raise an invoice with amount greater than zero');
+				}
+				else{
+					Decimal TotalAmount = 0.0;
+					boolean checkApprovedOrginal = true;
+					for(Purchase_Order_Invoice_Junction__c objPurchaseOrderInvoice:  lstPurchaseOrderInvoice){
+						System.debug('----->'+objPurchaseOrderInvoice.Purchase_Order__r.PO_Status__c);
+						if ((objPurchaseOrderInvoice.Purchase_Order__r.PO_Status__c == 'Amended - Approved') || objPurchaseOrderInvoice.Purchase_Order__r.PO_Status__c == 'Original' ||objPurchaseOrderInvoice.Purchase_Order__r.PO_Status__c.contains('Orginal')) {
+							TotalAmount+=objPurchaseOrderInvoice.Purchase_Order__r.BalanceAmount__c;
+						}else{
+							checkApprovedOrginal = false;
+							break;
+						}
+					}
+
+					if(!checkApprovedOrginal){
+						objModalWrapper = new ModalWrapper('Number cannot be assigned until the POs assigned to the invoice are in Orginal/Amended-Approved Status');
+
+					}else{
+						if(objInvoiceDetailsWrapper.totalGrossAmount==null)
+						objInvoiceDetailsWrapper.totalGrossAmount=0.0;
+						if(objInvoiceDetailsWrapper.totalGrossAmountNew==null)
+						objInvoiceDetailsWrapper.totalGrossAmountNew=0.0;
+						if(objInvoiceDetailsWrapper.totalFeeLines==null)
+						objInvoiceDetailsWrapper.totalFeeLines=0.0;
+
+						// if(TotalAmount>=objInvoiceDetailsWrapper.totalGrossAmount+objInvoiceDetailsWrapper.totalFeeLines){
+						if(TotalAmount>=objInvoiceDetailsWrapper.totalFeeLines){
+							if(objOpportunity != null && objJobDetailsWrapper != null && objOpportunity.MLR_Required__c  && (!objJobDetailsWrapper.hasMLR)){
+								if(objInvoiceDetailsWrapper != null && objInvoiceDetailsWrapper.objInvoiceToDisplay != null){
+									Invoice__c objInvoiceToUpdateMLR = new Invoice__c();
+									objInvoiceToUpdateMLR = objInvoiceDetailsWrapper.objInvoiceToDisplay;
+									objInvoiceToUpdateMLR.toSendeMLRMail__c = true;
+									try{
+										checkRecursiveInvoice.run = true;
+										update objInvoiceToUpdateMLR;
+										checkRecursiveInvoice.run = true;
+									}catch(exception e){
+										System.debug('---->'+e.getMessage());
+										Database.rollback( sp );
+									}
+
+								}
+
+								objModalWrapper = new ModalWrapper('You need a valid MLR before you can finalise an invoice in this job 2.');
+
+							}else{
+								boolean flaglinetemp=false;
+								if(lstForeCastWrapper!=null)
+								{
+									for(Integer i=0;i<lstForeCastWrapper.size();i++)
+									{
+										if(lstForeCastWrapper[i].isSelected)
+										{
+											flaglinetemp=true;
+										}
+
+									}
+								}
+
+								if(flaglinetemp)
+								objModalWrapper =new ModalWrapper('displayAssignNumberStep1',true);
+								else
+								{
+									ThirdModal();
+									objModalWrapper =new ModalWrapper('displayAssignNumberStep1',false);
+									objModalWrapper =new ModalWrapper('displayAssignNumberStep3',true);
+								}
+
+								//  objModalWrapper =new ModalWrapper('displayAssignNumberStep1',true);
+							}
+
+						}else{
+
+							objModalWrapper = new ModalWrapper('The Total amount of POs associated with Invoice should be greater or equal to Net Fee.');
+						}
+					}
+
+				}
+
+			}else if(objOpportunity != null && objJobDetailsWrapper != null && objOpportunity.MLR_Required__c  && (!objJobDetailsWrapper.hasMLR)){
+
+				if(objInvoiceDetailsWrapper.totalGrossAmountNew<=0)
+				{
+					objModalWrapper = new ModalWrapper('Please raise an invoice with amount greater than zero');
+				}
+
+				else if(objInvoiceDetailsWrapper != null && objInvoiceDetailsWrapper.objInvoiceToDisplay != null){
+					Invoice__c objInvoiceToUpdateMLR = new Invoice__c();
+					objInvoiceToUpdateMLR = objInvoiceDetailsWrapper.objInvoiceToDisplay;
+					objInvoiceToUpdateMLR.toSendeMLRMail__c = true;
+					try{
+						update objInvoiceToUpdateMLR;
+						checkRecursiveInvoice.run = true;
+					}catch(exception e){
+						System.debug('---->'+e.getMessage());
+					}
+
+				}
+				Database.rollback( sp );
+				objModalWrapper = new ModalWrapper('You need a valid MLR before you can finalise an invoice in this job 3.');
+
+			}else{
+				system.debug('----1---'+lstForeCastWrapper);
+
+				if(objInvoiceDetailsWrapper.totalGrossAmountNew<=0)
+				{
+					objModalWrapper = new ModalWrapper('Please raise an invoice with amount greater than zero');
+				}
+				else
+				{
+					boolean flaglinetemp=false;
+					if(lstForeCastWrapper!=null)
+					{
+						for(Integer i=0;i<lstForeCastWrapper.size();i++)
+						{
+							if(lstForeCastWrapper[i].isSelected)
+							{
+								flaglinetemp=true;
+							}
+
+						}
+					}
+
+					if(flaglinetemp)
+					objModalWrapper =new ModalWrapper('displayAssignNumberStep1',true);
+					else
+					{
+						ThirdModal();
+						objModalWrapper =new ModalWrapper('displayAssignNumberStep1',false);
+						objModalWrapper =new ModalWrapper('displayAssignNumberStep3',true);
+					}
+				}
+			}
+
+			// if(objOpportunity != null && objJobDetailsWrapper != null && objOpportunity.MLR_Required__c  && (!objJobDetailsWrapper.hasMLR)){
+			// checkMLR = false;
+			// }
+			// if(objJobDetailsWrapper != null && objJobDetailsWrapper.hasPO && !lstPurchaseOrderInvoice.isEmpty()){
+			// checkPO = false;
+			// }
+			// if(checkPO && checkMLR){
+			// objModalWrapper =new ModalWrapper('displayAssignNumberStep1',true);
+			// }
+			// else{
+			// if(checkMLR){
+			// Decimal TotalAmount = 0.0;
+			// for(Purchase_Order_Invoice_Junction__c JN:  lstPurchaseOrderInvoice){
+			// TotalAmount+=JN.Amount_Paid__c;
+			// }
+			// if(TotalAmount>=objInvoiceDetailsWrapper.totalGrossAmount+objInvoiceDetailsWrapper.totalFeeLines){
+			// objModalWrapper =new ModalWrapper('displayAssignNumberStep1',true);
+			// }
+			// else{
+			//Suggested by JM
+			// objModalWrapper = new ModalWrapper('The Total amount of PO should be greater or equal to Gross.');
+			// }
+			// }else{
+			// if(objInvoiceDetailsWrapper != null && objInvoiceDetailsWrapper.objInvoiceToDisplay != null){
+			// Invoice__c objInvoiceToUpdateMLR = new Invoice__c();
+			// objInvoiceToUpdateMLR = objInvoiceDetailsWrapper.objInvoiceToDisplay;
+			// objInvoiceToUpdateMLR.toSendeMLRMail__c = true;
+			// try{
+			// update objInvoiceToUpdateMLR;
+			// }catch(exception e){
+			// System.debug('---->'+e.getMessage());
+			// }
+
+			// }
+
+			// objModalWrapper = new ModalWrapper('You need a valid MLR before you can finalise an invoice in this job.');
+			// }
+			// }
+
+		}else{
+			objModalWrapper = new ModalWrapper('No invoices Selected!');
+
+
+		}
+	}
+
+	// Close all Modals
+	Public Void CancelModal() {
+
+		objModalWrapper = new ModalWrapper();
+
+
+		/* IsAssignedId =false;
+		PropertyDetails=false;
+		IsModal=false;
+		IsPdf=false;*/
+
+
+
+	}
+
+	public AssignId__c assID;
+	Public string Patternval{get;set;}
+	public Boolean IsProceed;
+	// gat the value from the custom setting to assign to id
+
+	Public Void ThirdModal() {
+		List<AssignId__c> AssIgnList  =  AssignId__c.getall().values();
+		assID= AssIgnList[0];
+		Patternval = assID.Invoice_Pattern__c;
+		String InvID = string.valueof(integer.valueof(assID.AssignNo__c));
+		Patternval = Patternval.substring(0,Patternval.length()-InvID.Length())+InvID;
+		Patternval = Patternval.replaceall('X','0');
+		assID.AssignNo__c= assID.AssignNo__c+1;
+		update assID;
+
+		SaveAssignId();
+
+
+
+
+
+	}
+
+
+	Public Void SaveAssignId() {
+		//lstOfbooleanCostWrapper
+		try{
+			system.debug('22222');
+			// If(selectedInvoice.Status__c !='Approved'){
+
+			IsAssignBtn=false;
+			/* String Patternval = assID.Invoice_Pattern__c;
+		String InvID = string.valueof(integer.valueof(assID.AssignNo__c));
+		Patternval = Patternval.substring(0,Patternval.length()-InvID.Length())+InvID;
+		Patternval = Patternval.replaceall('X','0');*/
+
+
+			objInvoiceDetailsWrapper.objInvoiceToDisplay.Assigned_Invoice_Number__c=Patternval;
+			objInvoiceDetailsWrapper.objInvoiceToDisplay.Status__c='Approved';
+			//selectedInvoice.Final_Invoice__c=true;
+			if(tofinal==true){
+				objInvoiceDetailsWrapper.objInvoiceToDisplay.OriginalInvoicePrinted__c=true;
+			}
+			if( objInvoiceDetailsWrapper.objInvoiceToDisplay.Final_Invoice__c==true)
+			{
+
+				objInvoiceDetailsWrapper.objInvoiceToDisplay.disableinvoice__c=true;
+				lstOpportunity[0].stageName= 'Closed Won';
+				invoiceFInalStr='Final Invoice (Invoice #'+  objInvoiceDetailsWrapper.objInvoiceToDisplay.Assigned_Invoice_Number__c +' ) already created ';
+
+
+				// update lstOpportunity[0];
+				//  objOpportunity = lstOpportunity[0];
+
+			}
+			system.debug('11111');
+			checkRecursiveInvoice.run = true;
+			if(objInvoiceDetailsWrapper.objInvoiceToDisplay.Invoice_Wording__c!=null){
+				// objInvoiceDetailsWrapper.objInvoiceToDisplay.Invoice_Wording__c= objInvoiceDetailsWrapper.objInvoiceToDisplay.Invoice_Wording__c.replaceAll('&nbsp;',' ');
+
+				// objInvoiceDetailsWrapper.objInvoiceToDisplay.Invoice_Wording__c= objInvoiceDetailsWrapper.objInvoiceToDisplay.Invoice_Wording__c.replaceAll('[\\u00A0]',' ');
+			}
+
+			update objInvoiceDetailsWrapper.objInvoiceToDisplay;
+
+
+
+			if( objInvoiceDetailsWrapper.objInvoiceToDisplay.Final_Invoice__c==true)
+			{
+
+				lstOpportunity[0].stageName= 'Closed';
+
+				update lstOpportunity[0];
+				objOpportunity = lstOpportunity[0];
+
+			}
+			objModalWrapper = new ModalWrapper('displayAssignNumberStep3',true);
+			//  }
+			List<Opportunity> lstofOppforarea = new List<Opportunity>();
+			lstofOppforarea = [SELECT Id,Total_Invoice_Area__c FROM Opportunity Where Id=:strOpportunityID];
+			if(!lstofOppforarea.isEmpty()){
+				TotalInvoicedArea =lstofOppforarea[0].Total_Invoice_Area__c;
+			}
+
+			system.debug('check----');
+
+
+
+		} catch (Exception e) {
+			ApexPages.addMessages(e);
+			String errorMsg = e.getMessage();
+			if(errorMsg.contains('FIELD_CUSTOM_VALIDATION_EXCEPTION')){
+				errorMsg = errorMsg.substringBetween('FIELD_CUSTOM_VALIDATION_EXCEPTION, ', ': ');
+			}else if(errorMsg.contains('FIELD_FILTER_VALIDATION_EXCEPTION')){
+				errorMsg = errorMsg.substringBetween('FIELD_FILTER_VALIDATION_EXCEPTION, ', ': ');
+			}else if(errorMsg.contains('Assigned_Invoice_Number__c duplicates value')){
+				errorMsg = 'The invoice cannot be finalised at this moment because there is a conflict with another record. Can you please refresh the page and try again?';
+			}
+			objModalWrapper = new ModalWrapper(errorMsg);
+			return;
+		}
+	}
+	//T check for values if all the modal values for assign no. are true
+	Public Void AssignedNoCheck() {
+		if(objInvoiceDetailsWrapper.objInvoiceToDisplay.IsEngagementC__c == true && objInvoiceDetailsWrapper.objInvoiceToDisplay.IsDeliverySer__c== true &&  objInvoiceDetailsWrapper.objInvoiceToDisplay.IsPrice__c== true){
+			objModalWrapper = new ModalWrapper('displayAssignNumberStep2',true);
+
+
+		}
+		else{
+			system.debug('--'+objInvoiceDetailsWrapper.objInvoiceToDisplay.IsEngagementC__c+objInvoiceDetailsWrapper.objInvoiceToDisplay.IsDeliverySer__c+objInvoiceDetailsWrapper.objInvoiceToDisplay.IsPrice__c);
+			objModalWrapper = new ModalWrapper('Please ensure you have required documentation in place prior to proceeding');
+		}
+
+	}
+
+	public List<SelectOption> getRiasedForOpts() {
+		List<SelectOption> options = new List<SelectOption>();
+		List<Allocation__c> Sprints =  [Select id, Name, Assigned_To__c, Assigned_To__r.Name, externalCompany__c From Allocation__c WHERE externalCompany__c =null AND job__c = :objOpportunity.id ];
+		system.debug('--------------------------'+Sprints);
+		set<id> DuplicateCheck = new set<id>();
+		if(Sprints!=null&&Sprints.size()==1){
+			//if(costdetailwrper.costObject!=null){
+			//costdetailwrper.costObject.Created_For__c = Sprints[0].Assigned_To__c;
+			options.add(new SelectOption('', '--None--'));
+			//getAllocationOpts();
+			//  system.debug('-****************'+costdetailwrper.costObject.Created_For__c+'********'+Sprints[0].Assigned_To__c);
+			// }
+		}
+		else{
+			options.add(new SelectOption('', '--None--'));
+		}
+		for(Allocation__c spr : Sprints ){
+			if(!DuplicateCheck.contains(spr.Assigned_To__c)){
+				options.add(new  SelectOption(spr.Assigned_To__c, spr.Assigned_To__r.Name));
+				DuplicateCheck.add(spr.Assigned_To__c);
+			}
+		}
+		return options;
+	}
+
+
+	public void closeandfinalize(){
+
+
+
+		if(errorOnSave!=null && errorOnSave==true)
+		return;
+
+		boolean isErrorActive = false;
+		if(objOpportunity.Invoicing_Company2__c != null){
+			if(objOpportunity.Invoicing_Company2__r.Company_Status__c != 'Active'){
+				objModalWrapper = new ModalWrapper('Invoicing Company is not Active');
+				isErrorActive = true;
+			}
+		}else if(objOpportunity.Invoicing_Care_Of__c != null && objOpportunity.Invoicing_Care_Of__r.Client__c != null){
+			if(objOpportunity.Invoicing_Care_Of__r.Client__r.Company_Status__c != 'Active'){
+				objModalWrapper = new ModalWrapper('Care of Company is not Active');
+				isErrorActive = true;
+			}
+
+		}
+		if(!isErrorActive){
+			Savepoint sp = Database.setSavepoint();
+			if(objInvoiceDetailsWrapper.objInvoiceToDisplay!=null && selectedId!=null && selectedId!='')
+			{
+				saveAll();
+
+
+
+
+				list<Invoice__c> jobinvoiceList = [select id from Invoice__c where Opportunity__c =:lstOpportunity[0].id ];
+				for(Invoice__c i: jobinvoiceList)
+				{
+					i.disableinvoice__c = true;
+				}
+
+				try
+				{
+					update jobinvoiceList;
+				}
+				catch(Exception e)
+				{
+					objModalWrapper = new ModalWrapper(e.getMessage());
+					Database.rollback( sp );
+
+				}
+				checkRecursiveInvoice.run = true;
+			}
+
+
+
+
+			Invoice__c objInvoice = new Invoice__c();
+			try{
+				if(!String.isBlank(strOpportunityID) && objOpportunity != null){
+
+					if(objOpportunity.Engagement_Letter__c){
+
+						isJobClosed=true;
+						disableAllo=true;
+						selectedId ='';
+
+						objInvoice.Opportunity__c = strOpportunityID;
+						objInvoice.Status__c = 'Draft';
+						objInvoice.Company__c = objOpportunity.Instructing_Company__c;
+						// objInvoice.Payment_Charges__c = null;
+						objInvoice.Contact__c = objOpportunity.Instructing_Contact__c;
+						objInvoice.Final_Invoice__c=true;
+						objInvoice.Company__c = objOpportunity.Invoicing_Company2__c;
+						objInvoice.Payment_Charges__c = null;
+						objInvoice.Contact__c = objOpportunity.Instructing_Contact__c;
+						objInvoice.Description__c=objOpportunity.Name;
+						// objInvoice.C=objOpportunity.Invoicing_Company2__r.name;
+						objInvoice.Care_Of_Information__c=objOpportunity.Invoicing_Care_Of__c;
+						objInvoice.Invoice_contact__c = objOpportunity.Invoice_Contact__c;
+						//objInvoice.Invoice_Address__c =  objOpportunity.Invoicing_Address_Formula__c;
+						objInvoice.Address__c = objOpportunity.Invoicing_Address__c;
+						objInvoice.VAT__c=20;
+						insert objInvoice;
+
+						invoiceFInalStr='Final draft Invoice created ';
+
+
+						lstInvoice= new List<Invoice__c>();
+						lstInvoice = [Select Id, Name,
+						Company__c,
+						Care_Of_Information__c,
+						Company__r.name,
+						Invoice_contact__c,
+						Invoice_contact__r.Name,
+						Care_Of_Information__r.name,
+						Care_Of_Information__r.Care_of_Company_Name_Full__c,
+						Contact__r.name,
+						Final_Invoice__c,
+						Date_of_Invoice__c,
+						Job_Title_From_Job__c,
+						Manager__r.name,
+						Contact__c,
+						Amount_Inc_VAT__c,
+						Total_Fee__c,
+						Total_cost__c,
+						status__c,
+						Property_Type__c,
+						FE_Write_Of_Created_Date__c,
+						IsEngagementC__c,
+						IsDeliverySer__c,
+						IsPrice__c,
+						Payable_By__c,
+						is_International__c,
+						Opportunity__c,
+						File_Reference__c,
+						createdDate,
+						CreatedById,
+						CreatedBy.Name,
+						Invoice_Address__c,
+						Description__c,
+						Invoice_Wording__c,
+						VAT__c,
+						Assigned_Invoice_Number__c,
+						Opportunity__r.Invoicing_Company2__r.name,
+						Invoice_Currency__c,
+						Foreign_Country__c,
+						Vat_Reg_No__c,
+						disableinvoice__c,
+						Payment_Charges__c,
+						Reason_to_Unpay__c,
+						Total_amount__c,Total_Amount_Inc_Vat__c,OriginalInvoicePrinted__c
+						from
+						Invoice__c
+						where Opportunity__c =: strOpportunityID and  Status__c != 'Archived'
+						order by CreatedDate desc];
+
+						selectedId = objInvoice.id;
+						selectedInvoiceDetails();
+					}
+					else{
+						objModalWrapper =new ModalWrapper('displayEngagementLetterModal',true);
+						finalizejobFlag=true;
+
+					}
+				}else{
+					//objModalWrapper =new ModalWrapper('displayEngagementLetterModal',true);
+				}
+
+			}catch(DMLException e){
+				Database.rollback( sp );
+				String errorMsg = e.getMessage();
+				if(errorMsg.contains('FIELD_CUSTOM_VALIDATION_EXCEPTION')){
+					errorMsg = errorMsg.substringBetween('FIELD_CUSTOM_VALIDATION_EXCEPTION, ', ': ');
+				}else if(errorMsg.contains('FIELD_FILTER_VALIDATION_EXCEPTION')){
+					errorMsg = errorMsg.substringBetween('FIELD_FILTER_VALIDATION_EXCEPTION, ', ': ');
+				}
+				objModalWrapper = new ModalWrapper(errorMsg);
+				isJobClosed=false;
+				disableAllo=false;
+
+
+			}
+
+		}
+
+
+	}
+	/**
+	*   Method Name: updateJob
+	*   Description: method to Update Job Engagment Details
+	*   Param: None
+	*   Return: None
+	*/
+	public void updateJob(){
+
+		try{
+			if(objOpportunity != null){
+				update objOpportunity;
+				if(finalizejobFlag)
+				closeandfinalize();
+				else
+				addNewInvoice();
+
+				finalizejobFlag=false;
+				closeModal();
+			}
+		}catch(DMLException e){
+			String errorMsg = e.getMessage();
+			if(errorMsg.contains('FIELD_CUSTOM_VALIDATION_EXCEPTION')){
+				errorMsg = errorMsg.substringBetween('FIELD_CUSTOM_VALIDATION_EXCEPTION, ', ': ');
+			}else if(errorMsg.contains('FIELD_FILTER_VALIDATION_EXCEPTION')){
+				errorMsg = errorMsg.substringBetween('FIELD_FILTER_VALIDATION_EXCEPTION, ', ': ');
+			}
+			objModalWrapper = new ModalWrapper(errorMsg);
+
+		}
+
+	}
+
+
+	/**
+	*   Method Name: addNewInvoice
+	*   Description: method to create new Draft Invoice
+	*   Param: None
+	*   Return: None
+	*/
+	public void addNewInvoice(){
+		selectedId ='';
+
+		Invoice__c objInvoice = new Invoice__c();
+		try{
+			if(!String.isBlank(strOpportunityID) && objOpportunity != null){
+
+				if(objOpportunity.Engagement_Letter__c ){
+
+					boolean isErrorActive = false;
+					if(objOpportunity.Invoicing_Company2__c != null){
+						if(objOpportunity.Invoicing_Company2__r.Company_Status__c != 'Active'){
+							objModalWrapper = new ModalWrapper('Invoicing Company is not Active');
+							isErrorActive = true;
+						}
+					}else if(objOpportunity.Invoicing_Care_Of__c != null && objOpportunity.Invoicing_Care_Of__r.Client__c != null){
+						if(objOpportunity.Invoicing_Care_Of__r.Client__r.Company_Status__c != 'Active'){
+							objModalWrapper = new ModalWrapper('Care of Company is not Active');
+							isErrorActive = true;
+						}
+
+					}
+					if(!isErrorActive){
+						objInvoice.Opportunity__c = strOpportunityID;
+						objInvoice.Status__c = 'Draft';
+						objInvoice.Company__c = objOpportunity.Invoicing_Company2__c;
+						objInvoice.Contact__c = objOpportunity.Instructing_Contact__c;
+						objInvoice.Description__c=objOpportunity.Name;
+						objInvoice.Care_Of_Information__c=objOpportunity.Invoicing_Care_Of__c;
+						objInvoice.Invoice_contact__c = objOpportunity.Invoice_Contact__c;
+						//objInvoice.Invoice_Address__c =  objOpportunity.Invoicing_Address_Formula__c;
+						objInvoice.Address__c = objOpportunity.Invoicing_Address__c;
+						objInvoice.vat__c=20.0;
+						insert objInvoice;
+
+						lstInvoice= new List<Invoice__c>();
+						lstInvoice = [Select Id, Name,
+						Company__c,
+						Care_Of_Information__c,
+						Company__r.name,
+						Care_Of_Information__r.name,
+						Care_Of_Information__r.Care_of_Company_Name_Full__c,
+						Contact__r.name,
+						Final_Invoice__c,
+						Date_of_Invoice__c,
+						Job_Title_From_Job__c,
+						Manager__r.name,
+						Contact__c,
+						Invoice_Contact__c,
+						Invoice_contact__r.Name,
+						Amount_Inc_VAT__c,
+						Total_Fee__c,
+						Total_cost__c,
+						status__c,
+						Property_Type__c,
+						FE_Write_Of_Created_Date__c,
+						IsEngagementC__c,
+						IsDeliverySer__c,
+						IsPrice__c,
+						Payable_By__c,
+						is_International__c,
+						Opportunity__c,
+						createdDate,
+						CreatedById,
+						CreatedBy.Name,
+						Invoice_Address__c,
+						Description__c,
+						Invoice_Wording__c,
+						VAT__c,
+						Assigned_Invoice_Number__c,
+						Opportunity__r.Invoicing_Company2__r.name,
+						Invoice_Currency__c,
+						Foreign_Country__c,
+						Vat_Reg_No__c,
+						File_Reference__c,
+						disableinvoice__c,
+						Payment_Charges__c,
+						Reason_to_Unpay__c,
+						Total_amount__c,Total_Amount_Inc_Vat__c,OriginalInvoicePrinted__c
+						from
+						Invoice__c
+						where Opportunity__c =: strOpportunityID and  Status__c != 'Archived'
+						order by CreatedDate desc];
+
+						selectedId = objInvoice.id;
+						selectedInvoiceDetails();
+						// List<Accrual__c> lstAccural = [Select id, name,
+						// Job__c,
+						// Status__c,
+						// Accrual_Amount__c
+						// From
+						// Accrual__c
+						// where Job__c =: strOpportunityID and (Status__c = 'Awaiting Approval' or Status__c =  'Approved') and Accrual_Amount__c > 0];
+
+						// for(Accrual__c objAccural: lstAccural){
+
+						// if(objAccural.Status__c.equalsIgnoreCase('Approved')){
+						// objAccural.Status__c = 'Reversed By Invoice';
+						// }else{
+						// objAccural.Status__c = 'Rejected';
+						// }
+
+						// objModalWrapper = new ModalWrapper('Accural has been '+objAccural.Status__c);
+						// }
+					}
+				}else{
+					objModalWrapper =new ModalWrapper('displayEngagementLetterModal',true);
+				}
+
+			}
+		}catch(DMLException e){
+			String errorMsg = e.getMessage();
+			if(errorMsg.contains('FIELD_CUSTOM_VALIDATION_EXCEPTION')){
+				errorMsg = errorMsg.substringBetween('FIELD_CUSTOM_VALIDATION_EXCEPTION, ', ': ');
+			}else if(errorMsg.contains('FIELD_FILTER_VALIDATION_EXCEPTION')){
+				errorMsg = errorMsg.substringBetween('FIELD_FILTER_VALIDATION_EXCEPTION, ', ': ');
+
+			}
+			objModalWrapper = new ModalWrapper(errorMsg);
+
+		}
+	}
+
+	/**
+	*   Method Name: createPurchaseOrderInvoiceJunction
+	*   Description: method to fetch selected Purchase Order invoice Junction
+	*   Param: None
+	*   Return: None
+	*/
+	public void createPurchaseOrderInvoiceJunction(){
+		Purchase_Order_Invoice_Junction__c objPurchaseOrderJunction = new Purchase_Order_Invoice_Junction__c();
+		if(selectedPOIndex != null && !String.isBlank(selectedId)){
+			isPOChanged = true;
+			Purchase_Order__c objPurchaseOrderToUpdate = new Purchase_Order__c();
+			try{
+				if(lstPurchaseOrderWrapper.get(selectedPOIndex) != null){
+					objPurchaseOrderToUpdate = lstPurchaseOrderWrapper.get(selectedPOIndex).objPurchaseOrder;
+					if(lstPurchaseOrderWrapper.get(selectedPOIndex).isSelected){
+						if(String.isBlank(objPurchaseOrderToUpdate.name) || objPurchaseOrderToUpdate.name.equalsIgnoreCase('New')){
+							if(lstPurchaseOrderWrapper.get(selectedPOIndex) != null){
+								if(lstPurchaseOrderWrapper.get(selectedPOIndex).isSelected){
+									lstPurchaseOrderWrapper.set(selectedPOIndex, new PurchaseOrderWrapper(false, lstPurchaseOrderWrapper.get(selectedPOIndex).objPurchaseOrder,selectedPOIndex, lstPurchaseOrderWrapper.get(selectedPOIndex).isCurrentContext));
+								}else{
+									lstPurchaseOrderWrapper.set(selectedPOIndex, new PurchaseOrderWrapper(true, lstPurchaseOrderWrapper.get(selectedPOIndex).objPurchaseOrder,selectedPOIndex, lstPurchaseOrderWrapper.get(selectedPOIndex).isCurrentContext));
+								}
+							}
+							objModalWrapper = new ModalWrapper('Please enter a valid PO Number before adding to Invoice'); //.displayerrorMessage = true;
+						}else{
+							// List<Purchase_Order_Invoice_Junction__c> lstPurchaseOrderJunctionToInsert = new List<Purchase_Order_Invoice_Junction__c>();
+							// lstPurchaseOrderJunctionToInsert =  [Select id, name,
+							// Invoice__c,
+							//Amount_Paid__c,
+							// Purchase_Order__c
+							// From
+							// Purchase_Order_Invoice_Junction__c
+							// where Invoice__c =: selectedId and Purchase_Order__c =: objPurchaseOrderToUpdate.id limit 1];
+							// if(lstPurchaseOrderJunctionToInsert.isEmpty()){
+							// objPurchaseOrderJunction.Invoice__c = selectedId;
+							// objPurchaseOrderJunction.Purchase_Order__c = objPurchaseOrderToUpdate.id;
+							// lstPurchaseOrderInvoiceToInsert.add(objPurchaseOrderJunction);
+							//insert objPurchaseOrderJunction;
+							// }
+						}
+					}else{
+						// List<Purchase_Order_Invoice_Junction__c> lstPurchaseOrderJunctionToDel = new List<Purchase_Order_Invoice_Junction__c>();
+						// lstPurchaseOrderJunctionToDel =  [Select id, name,
+						// Invoice__c,
+						//Amount_Paid__c,
+						// Purchase_Order__c
+						// From
+						// Purchase_Order_Invoice_Junction__c
+						// where Invoice__c =: selectedId and Purchase_Order__c =: objPurchaseOrderToUpdate.id limit 1];
+						// if(!lstPurchaseOrderJunctionToDel.isEmpty()){
+						//delete lstPurchaseOrderJunctionToDel;
+						// }
+					}
+				}
+			}catch(exception e){
+				system.debug('---Hormese----'+e.getMessage());
+				String errorMsg = e.getMessage();
+				if(errorMsg.contains('FIELD_CUSTOM_VALIDATION_EXCEPTION')){
+					errorMsg = errorMsg.substringBetween('FIELD_CUSTOM_VALIDATION_EXCEPTION, ', ': ');
+				}else if(errorMsg.contains('FIELD_FILTER_VALIDATION_EXCEPTION')){
+					errorMsg = errorMsg.substringBetween('FIELD_FILTER_VALIDATION_EXCEPTION, ', ': ');
+				}
+				objModalWrapper = new ModalWrapper(errorMsg);
+				if(lstPurchaseOrderWrapper.get(selectedPOIndex) != null){
+					if(lstPurchaseOrderWrapper.get(selectedPOIndex).isSelected){
+						lstPurchaseOrderWrapper.set(selectedPOIndex, new PurchaseOrderWrapper(false, lstPurchaseOrderWrapper.get(selectedPOIndex).objPurchaseOrder,selectedPOIndex, lstPurchaseOrderWrapper.get(selectedPOIndex).isCurrentContext));
+					}else{
+						lstPurchaseOrderWrapper.set(selectedPOIndex, new PurchaseOrderWrapper(true, lstPurchaseOrderWrapper.get(selectedPOIndex).objPurchaseOrder,selectedPOIndex, lstPurchaseOrderWrapper.get(selectedPOIndex).isCurrentContext));
+					}
+				}
+				// objModalWrapper = new ModalWrapper(e.getMessage()); //.displayerrorMessage = true;
+
+			}
+		}
+
+	}
+	/**
+	*   Method Name: selectedUpdatePurchaseOrderAmount
+	*   Description: method to fetch selected Purchase Order
+	*   Param: None
+	*   Return: None
+	*/
+	public void selectedUpdatePurchaseOrderAmount(){
+		Purchase_Order__c objPurchaseOrderToUpdate = new Purchase_Order__c();
+		List<Purchase_Order__c> lstPurchaseOrderUpdated = new list<Purchase_Order__c>();
+		objModalWrapper = new ModalWrapper();
+		if(selectedPOIndex != null){
+
+			if(lstPurchaseOrderWrapper.get(selectedPOIndex) != null){
+				objPurchaseOrderToUpdate = lstPurchaseOrderWrapper.get(selectedPOIndex).objPurchaseOrder;
+
+				try{
+					if(!lstPurchaseOrderWrapper.get(selectedPOIndex).isCurrentContext){
+						objPurchaseOrderToUpdate.PO_Status__c = 'Amended - Approval Required';
+					}else{
+						objPurchaseOrderToUpdate.Prevent_Process__c = true;
+					}
+					update objPurchaseOrderToUpdate;
+
+					objPurchaseOrderToUpdate.Prevent_Process__c = false;
+					update objPurchaseOrderToUpdate;
+					lstPurchaseOrderUpdated = [Select id, Name,
+					Amount__c,
+					Job__c,
+					BalanceAmount__c,
+					Prevent_Process__c,
+					PO_Status__c
+					from
+					Purchase_Order__c
+					where id = : objPurchaseOrderToUpdate.id limit 1];
+					if(lstPurchaseOrderWrapper.get(selectedPOIndex).isDisabled)
+					{
+						lstPurchaseOrderWrapper.set(selectedPOIndex, new PurchaseOrderWrapper(lstPurchaseOrderWrapper.get(selectedPOIndex).isSelected, lstPurchaseOrderUpdated[0],selectedPOIndex, lstPurchaseOrderWrapper.get(selectedPOIndex).isCurrentContext,true));
+
+					}
+
+					else if(!objInvoiceDetailsWrapper.objInvoiceToDisplay.Status__c.equalsIgnoreCase('Draft') && (objPurchaseOrderToUpdate.PO_Status__c=='Amended - Approved' || objPurchaseOrderToUpdate.PO_Status__c=='Original' ||objPurchaseOrderToUpdate.PO_Status__c.contains('Orginal')))
+					{
+						lstPurchaseOrderWrapper.set(selectedPOIndex, new PurchaseOrderWrapper(lstPurchaseOrderWrapper.get(selectedPOIndex).isSelected, lstPurchaseOrderUpdated[0],selectedPOIndex, lstPurchaseOrderWrapper.get(selectedPOIndex).isCurrentContext,false));
+					}
+					else
+					lstPurchaseOrderWrapper.set(selectedPOIndex, new PurchaseOrderWrapper(lstPurchaseOrderWrapper.get(selectedPOIndex).isSelected, lstPurchaseOrderUpdated[0],selectedPOIndex, lstPurchaseOrderWrapper.get(selectedPOIndex).isCurrentContext,true));
+					if(!lstPurchaseOrderWrapper.get(selectedPOIndex).isCurrentContext){
+						objModalWrapper.displayPOAmendModal = true;
+						objModalWrapper.modalMessage = 'The Purchase Order Number '+lstPurchaseOrderUpdated[0].Name+ ' has been submitted for approval.';
+					}
+				}catch(exception e){
+					System.debug('---->'+e.getMessage());
+					objModalWrapper.displayerrorMessage = true;
+					String errorMsg = e.getMessage();
+					if(errorMsg.contains('FIELD_CUSTOM_VALIDATION_EXCEPTION')){
+						errorMsg = errorMsg.substringBetween('FIELD_CUSTOM_VALIDATION_EXCEPTION, ', ': ');
+					}else if(errorMsg.contains('FIELD_FILTER_VALIDATION_EXCEPTION')){
+						errorMsg = errorMsg.substringBetween('FIELD_FILTER_VALIDATION_EXCEPTION, ', ': ');
+					}
+					objModalWrapper.modalMessage = errorMsg;
+				}
+			}
+			selectedPOIndex = null;
+
+		}
+	}
+	/**
+	*   Method Name: createPurchaseOrder
+	*   Description: method to create Purchase Order
+	*   Param: None
+	*   Return: None
+	*/
+	public void createPurchaseOrder(){
+		Purchase_Order__c objPurchaseOrder = new Purchase_Order__c();
+		List<Purchase_Order__c> lstPurchaseOrderInserted = new list<Purchase_Order__c>();
+		objModalWrapper = new ModalWrapper();
+		try{
+			if(!String.isBlank(strOpportunityID)){
+				objPurchaseOrder.Amount__c = 0.0;
+				objPurchaseOrder.Job__c =strOpportunityID;
+				objPurchaseOrder.Name = 'New';
+				objPurchaseOrder.PO_Status__c ='Orginal';
+				insert objPurchaseOrder;
+
+				if(objInvoiceDetailsWrapper.objInvoiceToDisplay.OriginalInvoicePrinted__c== true &&
+						objInvoiceDetailsWrapper.objInvoiceToDisplay.Status__c!='Draft' ){
+
+
+					objInvoiceDetailsWrapper.objInvoiceToDisplay.OriginalInvoicePrinted__c=false;
+					if(objInvoiceDetailsWrapper.objInvoiceToDisplay.Invoice_Wording__c!=null){
+						// objInvoiceDetailsWrapper.objInvoiceToDisplay.Invoice_Wording__c= objInvoiceDetailsWrapper.objInvoiceToDisplay.Invoice_Wording__c.replace('&nbsp;',' ');
+						// objInvoiceDetailsWrapper.objInvoiceToDisplay.Invoice_Wording__c= objInvoiceDetailsWrapper.objInvoiceToDisplay.Invoice_Wording__c.replaceAll('[\\u00A0]',' ');
+					}
+					update objInvoiceDetailsWrapper.objInvoiceToDisplay;
+				}
+				lstPurchaseOrderInserted = [Select id, Name,
+				Amount__c,
+				Job__c,
+				BalanceAmount__c,
+				Prevent_Process__c,
+				PO_Status__c
+				from
+				Purchase_Order__c
+				where id = : objPurchaseOrder.id limit 1];
+				if(!lstPurchaseOrderWrapper.isEmpty()){
+					List<PurchaseOrderWrapper> lstPurchaseOrderWrapperTemp = new List<PurchaseOrderWrapper>();
+					lstPurchaseOrderWrapperTemp.addAll(lstPurchaseOrderWrapper);
+					lstPurchaseOrderWrapper = new List<PurchaseOrderWrapper>();
+					integer sizeOfPO = lstPurchaseOrderWrapper.size();
+					lstPurchaseOrderWrapper.add(new PurchaseOrderWrapper(false, lstPurchaseOrderInserted[0],0, true));
+					lstPurchaseOrderWrapper.addAll(lstPurchaseOrderWrapperTemp);
+					//lstPurchaseOrderWrapper[0].strPOStatus='Orginal';
+				}else{
+					lstPurchaseOrderWrapper.add(new PurchaseOrderWrapper(false, lstPurchaseOrderInserted[0],0, true));
+					//lstPurchaseOrderWrapper[0].strPOStatus ='Orginal';
+				}
+				//objJobDetailsWrapper.hasPO = true;
+			}
+		}catch(exception e){
+			System.debug('---->'+e.getMessage());
+			String errorMsg = e.getMessage();
+			if(errorMsg.contains('FIELD_CUSTOM_VALIDATION_EXCEPTION')){
+				errorMsg = errorMsg.substringBetween('FIELD_CUSTOM_VALIDATION_EXCEPTION, ', ': ');
+			}else if(errorMsg.contains('FIELD_FILTER_VALIDATION_EXCEPTION')){
+				errorMsg = errorMsg.substringBetween('FIELD_FILTER_VALIDATION_EXCEPTION, ', ': ');
+			}
+			objModalWrapper.displayerrorMessage = true;
+			objModalWrapper.modalMessage = errorMsg;
+		}
+	}
+
+	/**
+	*   Method Name: closeModalEngagement
+	*   Description: method to close Modal and reset Engagement Letter
+	*   Param: None
+	*   Return: None
+	*/
+	public void closeModalEngagement(){
+		closeModal();
+		if(objOpportunity != null){
+			objOpportunity.Engagement_Letter__c = false;
+			objOpportunity.Engagement_Letter_Sent_Date__c = null;
+		}
+	}
+
+	/**
+	*   Method Name: closeModal
+	*   Description: method to close Modal
+	*   Param: None
+	*   Return: None
+	*/
+	public void closeModal(){
+		objModalWrapper = new ModalWrapper();
+	}
+
+	/**
+	*   Method Name: showArchiveModal
+	*   Description: method to close Modal
+	*   Param: None
+	*   Return: None
+	*/
+	public void showArchiveModal(){
+		objModalWrapper = new ModalWrapper();
+		objModalWrapper.displayArchive = true;
+	}
+
+	public void refreshInvoiceInformationTable()
+	{
+		system.debug('test refresh'+objInvoiceDetailsWrapper.forecastFeeTotal);
+		if(objInvoiceDetailsWrapper.totalGrossAmount==null)
+		objInvoiceDetailsWrapper.totalGrossAmount=0.0;
+		if(objInvoiceDetailsWrapper.objInvoiceToDisplay.vat__c==null)
+		objInvoiceDetailsWrapper.objInvoiceToDisplay.vat__c=0.0;
+
+		objInvoiceDetailsWrapper.totalGrossAmountNew=objInvoiceDetailsWrapper.totalGrossAmount+(objInvoiceDetailsWrapper.totalFeeLines+objInvoiceDetailsWrapper.totalFeeLines*objInvoiceDetailsWrapper.objInvoiceToDisplay.vat__c/100);
+	}
+	public void refreshAllInformation()
+	{
+		try{
+			if(strForeCastWrapper!=null && strForeCastWrapper!='')
+			lstForeCastWrapper= (List<ForecastWrapper>)Json.deserialize(strForeCastWrapper,List<ForecastWrapper>.class);
+
+			if(strInvoiceLineItem!=null && strInvoiceLineItem!='')
+			listOfInvoiceLineItem= (List<Invoice_Line_Item__c>)Json.deserialize(strInvoiceLineItem,List<Invoice_Line_Item__c>.class);
+
+			if(strBreakdown!=null && strBreakdown!='')
+			LstBreakdown= (List<Invoice_Line_Item__c>)Json.deserialize(strBreakdown,List<Invoice_Line_Item__c>.class);
+			//     if(strCategry!=null && strCategry!='')
+			//   LstCategry= (List<Invoice_Line_Item__c>)Json.deserialize(strCategry,List<Invoice_Line_Item__c>.class);
+			//     if(strSummery!=null && strSummery!='')
+			//   LstSummery= (List<Invoice_Line_Item__c>)Json.deserialize(strSummery,List<Invoice_Line_Item__c>.class);
+
+			if(strbooleanCostWrapper!=null && strbooleanCostWrapper!='')
+			lstOfbooleanCostWrapper= (List<booleanCostWrapper>)Json.deserialize(strbooleanCostWrapper,List<booleanCostWrapper>.class);
+			if(objInvoiceDetailsWrapper.totalGrossAmount==null)
+			objInvoiceDetailsWrapper.totalGrossAmount=0.0;
+
+
+
+			if(objInvoiceDetailsWrapper.objInvoiceToDisplay.vat__c==null)
+			objInvoiceDetailsWrapper.objInvoiceToDisplay.vat__c =0.0;
+
+			objInvoiceDetailsWrapper.totalGrossAmountNew=objInvoiceDetailsWrapper.totalGrossAmount+(objInvoiceDetailsWrapper.totalFeeLines+objInvoiceDetailsWrapper.totalFeeLines*objInvoiceDetailsWrapper.objInvoiceToDisplay.vat__c/100);
+
+			system.debug('test refresh'+objInvoiceDetailsWrapper.forecastFeeTotal);
+		}catch(exception e){
+			system.debug('test refresh'+e.getMessage());
+
+		}
+
+	}
+	/**
+	*   Method Name: archiveInvoice
+	*   Description: method to close Modal
+	*   Param: None
+	*   Return: None
+	*/
+	public void archiveInvoice(){
+		objModalWrapper = new ModalWrapper();
+
+		Invoice__c objInvoice = new Invoice__c();
+		try{
+			if(archiveId!=null)
+			objInvoice=new Invoice__c(id=archiveId);
+			if(objInvoiceDetailsWrapper != null){
+				//objInvoice = objInvoiceDetailsWrapper.objInvoiceToDisplay;
+				if(objInvoice != null){
+					objInvoice.Status__c = 'Archived';
+					update objInvoice;
+					selectedId = '';
+					lstInvoice= new List<Invoice__c>();
+					lstInvoice = [Select Id, Name,
+					Company__c,
+					Invoice_contact__c,
+					Invoice_contact__r.Name,
+					Care_Of_Information__c,
+					Company__r.name,
+					Care_Of_Information__r.name,
+					Care_Of_Information__r.Care_of_Company_Name_Full__c,
+					Contact__c,
+					Contact__r.name,
+					Final_Invoice__c,
+					FE_Write_Of_Created_Date__c,
+					is_International__c,
+					Payable_By__c,
+					status__c,
+					Opportunity__c,  Opportunity__r.Invoicing_Company2__c,Opportunity__r.isClosed,
+					Opportunity__r.Invoicing_Company2__r.name,Amount_Inc_VAT__c,Total_cost__c,Total_Fee__c,
+					createdDate,
+					CreatedById,
+					CreatedBy.Name,
+					Invoice_Address__c,
+					Description__c,
+					Invoice_Wording__c,
+					VAT__c,
+					Assigned_Invoice_Number__c,Date_of_Invoice__c,
+					Invoice_Currency__c,
+					IsEngagementC__c,
+					IsDeliverySer__c,
+					IsPrice__c,
+					Foreign_Country__c,
+					Vat_Reg_No__c,
+					disableinvoice__c,
+					File_Reference__c,
+					Payment_Charges__c,
+					Reason_to_Unpay__c,Total_amount__c,Total_Amount_Inc_Vat__c,OriginalInvoicePrinted__c
+					from
+					Invoice__c
+					where Opportunity__c =: strOpportunityID and  Status__c != 'Archived'// and Status__c != 'Archived'
+					order by CreatedDate desc];
+					objInvoiceDetailsWrapper = new InvoiceDetailsWrapper();
+					lstPurchaseOrderWrapper = new List<PurchaseOrderWrapper>();
+					lstForeCastWrapper = new List<ForeCastWrapper>();
+					objModalWrapper = new ModalWrapper();
+					objJobDetailsWrapper = new JobDetailsWrapper();
+				}
+			}
+		}catch(exception e){
+			System.debug('---->'+e.getMessage());
+			String errorMsg = e.getMessage();
+			if(errorMsg.contains('FIELD_CUSTOM_VALIDATION_EXCEPTION')){
+				errorMsg = errorMsg.substringBetween('FIELD_CUSTOM_VALIDATION_EXCEPTION, ', ': ');
+			}else if(errorMsg.contains('FIELD_FILTER_VALIDATION_EXCEPTION')){
+				errorMsg = errorMsg.substringBetween('FIELD_FILTER_VALIDATION_EXCEPTION, ', ': ');
+			}
+			objModalWrapper.displayerrorMessage = true;
+			objModalWrapper.modalMessage = errorMsg;
+		}
+	}
+	/**
+	*   Method Name: selectedUpdatePurchaseOrder
+	*   Description: method to fetch selected Purchase Order
+	*   Param: None
+	*   Return: None
+	*/
+	public void selectedUpdatePurchaseOrder(){
+		Purchase_Order__c objPurchaseOrderToUpdate = new Purchase_Order__c();
+		List<Purchase_Order__c> lstPurchaseOrderUpdated = new list<Purchase_Order__c>();
+		objModalWrapper = new ModalWrapper();
+		if(selectedPOIndex != null){
+
+			if(lstPurchaseOrderWrapper!=null && lstPurchaseOrderWrapper.size()>selectedPOIndex && lstPurchaseOrderWrapper.get(selectedPOIndex) != null){
+				objPurchaseOrderToUpdate = lstPurchaseOrderWrapper.get(selectedPOIndex).objPurchaseOrder;
+				if(!String.isBlank(lstPurchaseOrderWrapper.get(selectedPOIndex).strPOStatus))
+				objPurchaseOrderToUpdate.PO_Status__c = lstPurchaseOrderWrapper.get(selectedPOIndex).strPOStatus;
+
+				try{
+					update objPurchaseOrderToUpdate;
+					lstPurchaseOrderUpdated = [Select id, Name,
+					Amount__c,
+					Job__c,
+					BalanceAmount__c,
+					Prevent_Process__c,
+					PO_Status__c
+					from
+					Purchase_Order__c
+					where id = : objPurchaseOrderToUpdate.id limit 1];
+					//  lstPurchaseOrderWrapper.set(selectedPOIndex, new PurchaseOrderWrapper(lstPurchaseOrderWrapper.get(selectedPOIndex).isSelected, lstPurchaseOrderUpdated[0],selectedPOIndex, lstPurchaseOrderWrapper.get(selectedPOIndex).isCurrentContext));
+					//if(lstPurchaseOrderUpdated[0].PO_Status__c == 'Amended-Approved' ){
+					// lstPurchaseOrderWrapper.get(selectedPOIndex).lstStatusOption.clear();
+					// for(Schema.PicklistEntry objSchemaPicklistPOStatus : lstSchemaPicklistPOStatusP){
+					// if(objSchemaPicklistPOStatus.getValue() ==  'Complete')
+					// lstPurchaseOrderWrapper.get(selectedPOIndex).lstStatusOption.add(new SelectOption(objSchemaPicklistPOStatus.getLabel(), objSchemaPicklistPOStatus.getValue()));
+					// else
+					// lstPurchaseOrderWrapper.get(selectedPOIndex).lstStatusOption.add(new SelectOption(objSchemaPicklistPOStatus.getLabel(), objSchemaPicklistPOStatus.getValue(), true));
+					// }
+					//}
+					if(lstPurchaseOrderWrapper.get(selectedPOIndex).isDisabled)
+					{
+						lstPurchaseOrderWrapper.set(selectedPOIndex, new PurchaseOrderWrapper(lstPurchaseOrderWrapper.get(selectedPOIndex).isSelected, lstPurchaseOrderUpdated[0],selectedPOIndex, lstPurchaseOrderWrapper.get(selectedPOIndex).isCurrentContext,true));
+
+					}
+
+					else if(!objInvoiceDetailsWrapper.objInvoiceToDisplay.Status__c.equalsIgnoreCase('Draft') && (objPurchaseOrderToUpdate.PO_Status__c=='Amended - Approved' || objPurchaseOrderToUpdate.PO_Status__c=='Original' ||objPurchaseOrderToUpdate.PO_Status__c.contains('Orginal')))
+					{
+						lstPurchaseOrderWrapper.set(selectedPOIndex, new PurchaseOrderWrapper(lstPurchaseOrderWrapper.get(selectedPOIndex).isSelected, lstPurchaseOrderUpdated[0],selectedPOIndex, lstPurchaseOrderWrapper.get(selectedPOIndex).isCurrentContext,false));
+					}
+					else{
+						lstPurchaseOrderWrapper.set(selectedPOIndex, new PurchaseOrderWrapper(lstPurchaseOrderWrapper.get(selectedPOIndex).isSelected, lstPurchaseOrderUpdated[0],selectedPOIndex, lstPurchaseOrderWrapper.get(selectedPOIndex).isCurrentContext,true));
+					}
+				}catch(exception e){
+					System.debug('---->'+e.getMessage());
+					String errorMsg = e.getMessage();
+					if(errorMsg.contains('FIELD_CUSTOM_VALIDATION_EXCEPTION')){
+						errorMsg = errorMsg.substringBetween('FIELD_CUSTOM_VALIDATION_EXCEPTION, ', ': ');
+					}else if(errorMsg.contains('FIELD_FILTER_VALIDATION_EXCEPTION')){
+						errorMsg = errorMsg.substringBetween('FIELD_FILTER_VALIDATION_EXCEPTION, ', ': ');
+					}
+					objModalWrapper.displayerrorMessage = true;
+					objModalWrapper.modalMessage = errorMsg;
+
+
+				}
+			}
+			selectedPOIndex = null;
+
+		}
+	}
+
+	/**
+	*   Method Name: selectedInvoiceDetails
+	*   Description: method to fetch selected invoice details
+	*   Param: None
+	*   Return: None
+	*/
+	public void selectedInvoiceDetails(){
+		lstPurchaseOrderInvoiceToInsert = new List<Purchase_Order_Invoice_Junction__c>();
+		lstPurchaseOrderInvoiceToDel  = new List<Purchase_Order_Invoice_Junction__c>();
+		mapPurchaseOrderJunctionInsertDel = new map<id, Purchase_Order_Invoice_Junction__c>();
+		List<Invoice__c> lstInvoiceSelected = new List<Invoice__c>();
+		List<Purchase_Order__c> lstPurchaseOrder = new List<Purchase_Order__c>();
+		List<Forecasting__c> lstForecasting = new List<Forecasting__c>();
+		lstPurchaseOrderWrapper = new List<PurchaseOrderWrapper>();
+		lstForeCastWrapper = new List<ForeCastWrapper>();
+		LIst<Purchase_Order_Invoice_Junction__c> lstPOJunction = new List<Purchase_Order_Invoice_Junction__c>();
+		LIst<Invoice_Allocation_Junction__c> lstInvoiceAllocation = new List<Invoice_Allocation_Junction__c>();
+		List<Accrual__c> lstPendingAccurals = new List<Accrual__c>();
+		LstBreakdown= new List<Invoice_Line_Item__c>();
+		LstCategry= new List<Invoice_Line_Item__c>();
+		LstSummery= new List<Invoice_Line_Item__c>();
+		objInvoiceDetailsWrapper = new InvoiceDetailsWrapper();
+		lstLinItem = new List<Invoice_Line_Item__c>();
+		strForeCastWrapper=null;
+		strInvoiceLineItem=null;
+		strbooleanCostWrapper=null;
+		strBreakdown=null;
+		isPOChanged = false;
+		costType='Breakdown';
+		System.debug('---Selected Invoice---'+selectedId);
+		if(!String.isBlank(selectedId)){
+			// Fetching Details of the Selected Invoice
+			lstInvoiceSelected = [Select Id, name,
+			Company__c,
+			Company__r.name, Care_Of_Information__r.name,
+			Contact__c,
+			Invoice_contact__c,
+			Invoice_contact__r.Name,
+			Contact__r.name,
+			Care_Of_Information__c,
+			Care_Of_Information__r.Care_of_Company_Name_Full__c,
+			Final_Invoice__c,
+			FE_Write_Of_Created_Date__c,
+			is_International__c,
+			Payable_By__c,
+			Status__c,
+			Opportunity__c,
+			Opportunity__r.MLR_Required__c,
+			createdDate,
+			CreatedById,
+			CreatedBy.Name,
+			Invoice_Address__c,
+			Description__c,
+			Invoice_Wording__c,
+			VAT__c,
+			File_Reference__c,
+			Amount_Inc_VAT__c,
+			Date_of_Invoice__c,
+			Assigned_Invoice_Number__c,
+			Invoice_Currency__c,
+			Foreign_Country__c,
+			disableinvoice__c,
+			Vat_Reg_No__c,
+			disableAssignNum__c,
+			IsEngagementC__c,
+			IsDeliverySer__c,
+			Payment_Charges__c,
+			IsPrice__c,
+			Reason_to_Unpay__c,
+			Payment_Balance__c,
+			Total_Amount__c,Total_Amount_Inc_Vat__c,OriginalInvoicePrinted__c,
+			(select id, Amount_ex_VAT__c,International_Amount__c,Fee__c,IsFromAllocation__c,type__c, Description__c from Invoice_Line_Items__r where type__c = 'Fee')
+			From
+			Invoice__c
+			where
+			id = :selectedId limit 1];
+
+			//beginning of new logic addition - for "PDF VALUES" tab
+
+			//logic added for PDF values Table
+			//check whether to show PDF values tab or NOT
+			/*pdfTabSuccess = pdfTabFailed = false;
+			pdfTabMessage = '';
+			*/
+			pdfTabSuccess = false;
+			pdfTabFailed = false;
+			pdfTabMessage = '';
+			/*
+			* Label.Allocation_Department_Option1 = Residential - Development
+			* Label.Allocation_Department_Option2 = Residential - New Homes
+			* Label.Allocation_Department_Option3 = International Properties
+			* Label.Invoice_Cost_Category = Cost Flow Through (Residential only)
+			*/
+			try{
+				pdfInvoice = [Select Id, Name, Total_PDF_Amount__c,
+					(Select Invoice__c From Invoice_Allocation_Junctions__r
+						Where Allocation__r.Main_Allocation__c = TRUE AND
+						(Allocation__r.Department_Allocation__c =: Label.Allocation_Department_Option1 OR Allocation__r.Department_Allocation__c =: Label.Allocation_Department_Option2 OR Allocation__r.Department_Allocation__c =: Label.Allocation_Department_Option3)
+					),
+					(Select Invoice__c From Invoice_Cost_Junctions__r
+					Where Disbursement__r.Category__c =: Label.Invoice_Cost_Category)
+					From Invoice__c
+					Where Id =: selectedId Limit 1
+				];
+			}catch(Exception ex){
+				System.debug('-- Error while fetching data for PDF Values tab : '+ ex);
+			}
+
+			//clear feesList & costsList to remove previous values
+			feesList.clear();
+			costsList.clear();
+			if(pdfInvoice.Invoice_Allocation_Junctions__r.size()> 0 && pdfInvoice.Invoice_Cost_Junctions__r.size()> 0){
+				showPDFTab = true;
+				//Now that we know that PDF tab has to be displayed, we'll query for required data
+				List<Invoice_Line_Item__c> invLineItemList = [
+					Select Id, Name, Description__c, Is_International__c, Type__c, Amount_ex_VAT__c,
+						International_Amount__c, International_VAT_Amount_Formula__c, VAT_Amount__c,Amount_ex_VAT_Formula__c,
+						PDF_Amount__c, PDF_VAT__c
+					From Invoice_Line_Item__c Where Invoice__c =: selectedId
+				];
+				// segregate the lists into two parts feesList, costsList
+				for(Invoice_Line_Item__c invLineItem: invLineItemList){
+					if(invLineItem.Type__c == 'Fee')
+						feesList.add(invLineItem);
+					else if(invLineItem.Type__c == 'Cost')
+						costsList.add(invLineItem);
+				}
+
+			}
+			else
+				showPDFTab = false;
+			//end of new changes
+
+			System.debug(objOpportunity+'---Selecte1d Invoice---'+lstInvoiceSelected);
+			if(!lstInvoiceSelected.isEmpty() && objOpportunity != null){
+
+				Invoice__c objInvoice = new Invoice__c();
+				objInvoice = lstInvoiceSelected[0];
+				//related =lstInvoiceSelected[0].Relates_To__c;
+				// Logic to show the Assign Number Button
+				if(objInvoice.Status__c=='Draft'){
+					IsAssignBtn=true;
+				}
+				else{
+					IsAssignBtn=false;
+				}
+				//objInvoice.disableAssignNum__c&&
+				// if(objInvoice.disableinvoice__c){
+				//     IsAssignBtn=false;
+				// }
+				if(objInvoice.disableAssignNum__c)
+				{
+					IsAssignBtn=false;
+				}
+				invoicePayment.Amount__c=objInvoice.Payment_Balance__c;
+
+				// Fetching the status of the Invoice
+				if(objInvoice.Status__c.equalsIgnoreCase('Draft'))
+					objInvoiceDetailsWrapper.isDraft = true;
+				else if(objInvoice.Status__c.equalsIgnoreCase('Approved'))
+					objInvoiceDetailsWrapper.isApproved = true;
+				disableAllo=false;
+				// Checking if the invoice is final
+				objInvoiceDetailsWrapper.isFinal = objInvoice.Final_Invoice__c;
+				if(objInvoice.Final_Invoice__c)
+				disableAllo=true;
+
+				objInvoiceDetailsWrapper.objInvoiceToDisplay = objInvoice;
+				if(objInvoiceDetailsWrapper.objInvoiceToDisplay.vat__c==null)
+					objInvoiceDetailsWrapper.objInvoiceToDisplay.vat__c=0.0;
+				if(objInvoiceDetailsWrapper.objInvoiceToDisplay.Invoice_Wording__c!=null){
+					System.debug('---Before---'+objInvoiceDetailsWrapper.objInvoiceToDisplay.Invoice_Wording__c);
+					objInvoiceDetailsWrapper.objInvoiceToDisplay.Invoice_Wording__c= objInvoiceDetailsWrapper.objInvoiceToDisplay.Invoice_Wording__c.replaceAll('(\\u00A0\\u00A0\\u00A0\\u00A0)','&nbsp;&nbsp;&nbsp;&nbsp;');
+
+					//  String subInvoiceWording=objInvoiceDetailsWrapper.objInvoiceToDisplay.Invoice_Wording__c;
+
+					// subInvoiceWording = subInvoiceWording.replaceAll('(\\s+)', '&nbsp;');
+					// subInvoiceWording = subInvoiceWording.replaceAll('(\\u00A0)', '&nbsp;');
+					// subInvoiceWording =  subInvoiceWording.replaceAll('[ ]{2,}','&nbsp;');
+
+					System.debug('---After---'+objInvoiceDetailsWrapper.objInvoiceToDisplay.Invoice_Wording__c);
+					// objInvoiceDetailsWrapper.objInvoiceToDisplay.Invoice_Wording__c= objInvoiceDetailsWrapper.objInvoiceToDisplay.Invoice_Wording__c.replaceAll('[\\u00A0]',' ');
+				}
+
+				if(objInvoiceDetailsWrapper.objInvoiceToDisplay.Description__c==null)
+					objInvoiceDetailsWrapper.objInvoiceToDisplay.Description__c=objOpportunity.Name;
+				objInvoiceDetailsWrapper.displayButtonGroup = true;
+				objInvoiceDetailsWrapper.displayInvoiceInformation = true;
+
+				if(lstOpportunity[0].stageName== 'Closed Won')
+				{
+					objInvoiceDetailsWrapper.objInvoiceToDisplay.disableinvoice__c=true;
+					IsAssignBtn=false;
+					isJobClosed=true;
+					disableAllo=true;
+
+				}
+				if( objInvoiceDetailsWrapper.objInvoiceToDisplay.Final_Invoice__c)
+				{
+					isJobClosed=true;
+				}
+
+				// Fetching the Purchase Orders Associated with the Job
+				lstPurchaseOrder = [Select id, name,
+				Amount__c,
+				Job__c,
+				BalanceAmount__c,
+				PO_Status__c
+				from
+				Purchase_Order__c
+				where Job__c =: objInvoice.Opportunity__c order by CreatedDate desc limit 49999];
+
+
+
+				lstPOJunction =  [Select id, name,
+				Invoice__c,
+				Amount_Paid__c,
+				Purchase_Order__c
+				From
+				Purchase_Order_Invoice_Junction__c
+				where Invoice__c =: selectedId limit 49999];
+
+				map<id,Purchase_Order_Invoice_Junction__c > mapIdPurchaseOrder = new map<id,Purchase_Order_Invoice_Junction__c >();
+
+				for(Purchase_Order_Invoice_Junction__c objPurchaseOrderInvoice: lstPOJunction) {
+					if(objPurchaseOrderInvoice.Purchase_Order__c != null){
+						mapIdPurchaseOrder.put(objPurchaseOrderInvoice.Purchase_Order__c, objPurchaseOrderInvoice);
+						mapPurchaseOrderJunctionInsertDel.put(objPurchaseOrderInvoice.Purchase_Order__c, objPurchaseOrderInvoice);
+					}
+				}
+				integer indexOf= 0;
+				for (Purchase_Order__c objPurchaseOrder: lstPurchaseOrder) {
+
+					if(mapIdPurchaseOrder.containsKey(objPurchaseOrder.id)) {
+						system.debug('---Hormese----'+objInvoice.Status__c);
+						if(objInvoice.Status__c.equalsIgnoreCase('Draft'))
+						lstPurchaseOrderWrapper.add(new PurchaseOrderWrapper(true, objPurchaseOrder,indexOf, false,false));
+						else
+						{
+							lstPurchaseOrderWrapper.add(new PurchaseOrderWrapper(true, objPurchaseOrder,indexOf, false,true));
+							system.debug('---Hormese in loop----'+objInvoice.Status__c);
+						}
+
+					} else {
+						if(!objInvoice.Status__c.equalsIgnoreCase('Draft'))
+						{
+							if( (objPurchaseOrder.PO_Status__c=='Amended - Approved' || objPurchaseOrder.PO_Status__c.contains('Original') ||objPurchaseOrder.PO_Status__c.contains('Orginal')  ))
+							{
+								lstPurchaseOrderWrapper.add(new PurchaseOrderWrapper(false, objPurchaseOrder, indexOf, false,false));
+							}
+							else
+							lstPurchaseOrderWrapper.add(new PurchaseOrderWrapper(false, objPurchaseOrder, indexOf, false,true));
+						}
+
+						else
+						lstPurchaseOrderWrapper.add(new PurchaseOrderWrapper(false, objPurchaseOrder, indexOf, false,false));
+
+					}
+					indexOf = indexOf+1;
+				}
+				system.debug('---Hormese in loop----'+lstPurchaseOrderWrapper);
+
+				// Checking if Purchase Order is Present
+				// if(!lstPurchaseOrder.isEmpty()){
+				// objJobDetailsWrapper.hasPO = true;
+				// }
+
+				// Fetching Forecasts for the present amount
+				if(objInvoice.Status__c=='Draft')
+				{
+					lstForecasting = [Select id, Name,
+					Allocation__c,
+					Allocation__r.Staff_Work_Type__c,
+					Allocation__r.externalCompany__c,
+					Allocation__r.externalCompany__r.name,
+					CS_Forecast_Date__c,
+					Amount__c,
+					(Select id, Amount__c from Accrual_Forecasting_Junction__r where Accrual__r.Status__c='Approved' and Amount__c>0 )
+					From
+					Forecasting__c
+					where CS_Forecast_Date__c  = THIS_MONTH and Allocation__r.Job__c = :objOpportunity.id and  Allocation__r.Complete__c= false Limit 49999];
+
+					lstInvoiceAllocation = [Select id, name,
+					Allocation__c,
+					Amount__c,
+					Forecasting__c,
+					International_Amount__c,
+					Invoice__c,
+					Master_Amount__c
+					From
+					Invoice_Allocation_Junction__c
+					where
+					Invoice__c = : selectedId and Forecasting__c != null limit 49999];
+				}
+
+				else
+				{
+
+					lstInvoiceAllocation = [Select id, name,
+					Allocation__c,
+					Amount__c,
+					Forecasting__c,
+					International_Amount__c,
+					Invoice__c,
+					Master_Amount__c
+					From
+					Invoice_Allocation_Junction__c
+					where
+					Invoice__c = : selectedId and Forecasting__c != null limit 49999];
+					Set<Id> forecastIdSet = new Set<Id>();
+					for(Invoice_Allocation_Junction__c ic : lstInvoiceAllocation)
+					{
+						forecastIdSet.add(ic.Forecasting__c);
+					}
+					lstForecasting = [Select id, Name,
+					Allocation__c,
+					Allocation__r.Staff_Work_Type__c,
+					Allocation__r.externalCompany__c,
+					Allocation__r.externalCompany__r.name,
+					CS_Forecast_Date__c,
+					Amount__c,
+					(Select id, Amount__c from Accrual_Forecasting_Junction__r where Accrual__r.Status__c='Approved' and Amount__c>0 )
+					From
+					Forecasting__c
+					where id in :forecastIdSet Limit 49999];
+					//CS_Forecast_Date__c  = THIS_MONTH and Allocation__r.Job__c = :objOpportunity.id and  Allocation__r.Complete__c= false Limit 49999];
+
+
+				}
+
+				// lstPendingAccurals =[Select id, name,
+				// Accrual_Amount__c,
+				// Status__c,
+				// Job__c,
+				// (Select id, name,
+				// Forecasting__c,
+				// Amount__c
+				// From
+				// Accrual_Forecasting_Junction__r)
+				// From
+				// Accrual__c
+
+				// where Status__c = 'Approved' and Date_To_Bill__c = THIS_MONTH and Job__c = :objOpportunity.id limit 49999];
+
+
+				list < Invoice_Cost_Junction__c > ListCostInvoice = new list < Invoice_Cost_Junction__c > ();
+				List<Disbursements__c> lstDisbursments = new List<Disbursements__c> ();
+				if(objInvoice.Status__c=='Draft')
+				{
+					lstDisbursments =    [Select Description__c,
+					Category__c,
+					Sub_Category__c,
+					status__c,
+					VAT_Applicable__c,
+					Created_For__c,
+					Created_For__r.name,
+					Invoice_Details__c,
+					Recharge_Cost__c ,
+					Purchase_Cost__c,
+					Purchase_Date__c
+					from
+					Disbursements__c where Job__c = :objOpportunity.id and (status__c='To be Invoiced'  or status__c='Included on Draft') order by CreatedDate desc Limit 700];
+
+
+
+
+					ListCostInvoice = [select id, Disbursement__c, Invoice__c from Invoice_Cost_Junction__c where Invoice__c=:selectedid limit 49999];
+
+				}
+
+				else
+				{
+					ListCostInvoice = [select id, Disbursement__c, Invoice__c from Invoice_Cost_Junction__c where Invoice__c=:selectedid limit 49999];
+
+					Set<Id> disbursIdSet = new Set<Id>();
+					for(Invoice_Cost_Junction__c ic : ListCostInvoice)
+					{
+						disbursIdSet.add(ic.Disbursement__c);
+					}
+
+					lstDisbursments =    [Select Description__c,
+					Category__c,
+					Sub_Category__c,
+					status__c,
+					VAT_Applicable__c,
+					Created_For__c,
+					Created_For__r.name,
+					Invoice_Details__c,
+					Recharge_Cost__c ,
+					Purchase_Cost__c,
+					Purchase_Date__c
+					from
+					Disbursements__c where id in :disbursIdSet order by CreatedDate desc Limit 700] ;
+
+					//where Job__c = :objOpportunity.id and (status__c='To be Invoiced'  or status__c='Included on Draft')];
+
+
+
+
+
+				}
+
+				lstLinItem=[select id, Fee__c,IsFromAllocation__c,Cost_Line_Category__c,Invoice__c,type__c,International_Amount__c,VAT_Amount_Prec__c,VAT_Amount__c,Amount_ex_VAT__c,Description__c,Cost_Type__c from Invoice_Line_Item__c where
+				Invoice__c = :selectedId and  type__c = 'Cost'];
+
+				Decimal totalForcastfee=0.0;
+				Decimal totalFeeLines=0.0;
+				//
+				map<id,Invoice_Allocation_Junction__c > mapIdForecast = new map<id,Invoice_Allocation_Junction__c >();
+				for(Invoice_Allocation_Junction__c objInvoicAllocation: lstInvoiceAllocation){
+					mapIdForecast.put(objInvoicAllocation.Forecasting__c, objInvoicAllocation);
+
+				}
+
+				indexOf= 0;
+				listOfInvoiceLineItem=new List<Invoice_Line_Item__c>();
+				List<Invoice_Line_Item__c> listOfInvoiceLineItemTemp=new List<Invoice_Line_Item__c>();
+				lstForeCastWrapper=new List<ForecastWrapper>();
+
+				for (Invoice_Line_Item__c LineItem: objInvoice.Invoice_Line_Items__r) {
+					if(LineItem.International_Amount__c!=null)
+					totalFeeLines+=LineItem.International_Amount__c;
+					// if(LineItem.Description__c!=null && LineItem.Description__c.contains('Fee as agreed'))
+					// listOfInvoiceLineItem.add(LineItem);
+					// else
+					listOfInvoiceLineItemTemp.add(LineItem);
+
+				}
+				listOfInvoiceLineItem.addall(listOfInvoiceLineItemTemp);
+
+				Decimal amountTotal=0.0;
+				if(listOfInvoiceLineItem.isEmpty())
+				{
+					Invoice_Line_Item__c inl = new Invoice_Line_Item__c();
+					inl.Description__c='Fee as agreed';
+					inl.International_Amount__c=amountTotal;
+					inl.type__c='Fee';
+					inl.Invoice__c=selectedId;
+					//  inl.IsFromAllocation__c=true;
+					totalFeeLines=amountTotal;
+					totalForcastfee=amountTotal;
+					listOfInvoiceLineItem.add(inl);
+				}
+
+				System.debug('--Forecasting---'+lstForecasting);
+				for (Forecasting__c objForeCasting: lstForecasting) {
+
+					Decimal accrualAmount= 0.0;
+					Decimal invoiceamount =0.0;
+					if(objForeCasting.Amount__c>0.0)
+					invoiceamount=objForeCasting.Amount__c;
+					// else
+					// {
+					//      if(objForeCasting.Accrual_Forecasting_Junction__r!=null && objForeCasting.Accrual_Forecasting_Junction__r.size()>0)
+					// {
+					//     invoiceamount=objForeCasting.Accrual_Forecasting_Junction__r[0].Amount__c;
+					// }
+
+					// }
+
+					if(objForeCasting.Accrual_Forecasting_Junction__r!=null && objForeCasting.Accrual_Forecasting_Junction__r.size()>0)
+					{
+						for(Accrual_Forecasting_Junction__c objaccrfor : objForeCasting.Accrual_Forecasting_Junction__r){
+							accrualAmount +=objaccrfor.Amount__c;
+						}
+						//accrualAmount=objForeCasting.Accrual_Forecasting_Junction__r[0].Amount__c;
+					}
+					if(objInvoice.Status__c!='Draft'  || (objInvoice.Status__c=='Draft' && objForeCasting.Amount__c > 0)
+							|| (objInvoice.Status__c=='Draft' && objForeCasting.Amount__c<=0 && accrualAmount>0) )
+					{
+
+						if(mapIdForecast.containsKey(objForeCasting.id)){
+
+							System.debug('--ForecastingInLoop---'+mapIdForecast.get(objForeCasting.id));
+							if(mapIdForecast.get(objForeCasting.id).Amount__c != null){
+								lstForeCastWrapper.add(new ForecastWrapper(true, objForeCasting,indexOf,mapIdForecast.get(objForeCasting.id).Amount__c, objForeCasting.Amount__c,accrualAmount));
+							}else{
+
+								lstForeCastWrapper.add(new ForecastWrapper(true, objForeCasting,indexOf,invoiceamount+accrualAmount,objForeCasting.Amount__c,accrualAmount));
+							}
+
+							if(totalForcastfee==null)
+							totalForcastfee=0.0;
+							if(totalForcastfee!=null && mapIdForecast.get(objForeCasting.id)!=null){
+								if(mapIdForecast.get(objForeCasting.id).Amount__c != null){
+									totalForcastfee+=mapIdForecast.get(objForeCasting.id).Amount__c;
+								}
+							}
+						} else {
+							if(listOfInvoiceLineItemTemp.isEmpty()&& listOfInvoiceLineItem[0].International_Amount__c==amountTotal)
+							{
+								lstForeCastWrapper.add(new ForecastWrapper(true, objForeCasting, indexOf,invoiceamount+accrualAmount,objForeCasting.Amount__c,accrualAmount));
+								amountTotal+=objForeCasting.Amount__c+accrualAmount;
+								listOfInvoiceLineItem[0].International_Amount__c =amountTotal;
+								totalFeeLines=amountTotal;
+								totalForcastfee=amountTotal;
+
+							}
+							else
+							lstForeCastWrapper.add(new ForecastWrapper(false, objForeCasting, indexOf,invoiceamount,objForeCasting.Amount__c,accrualAmount));
+						}
+
+
+						indexOf = indexOf+1;
+					}
+				}
+				//   if(listOfInvoiceLineItemTemp.isEmpty()&&listOfInvoiceLineItem.size()==1)
+				//         {
+				//             listOfInvoiceLineItem[0].International_Amount__c=totalForcastfee;
+				//         }
+				if(lstForeCastWrapper!=null)
+				{
+					strForeCastWrapper=Json.serialize(lstForeCastWrapper);
+
+					strForeCastWrapper=strForeCastWrapper == null ?'':String.escapeSingleQuotes(strForeCastWrapper);
+				}
+
+				system.debug('---Hormesestr---'+strForeCastWrapper);
+
+				objInvoiceDetailsWrapper.forecastFeeTotal=totalForcastfee;
+				objInvoiceDetailsWrapper.totalFeeLines=totalFeeLines;
+
+
+				strInvoiceLineItem = Json.serialize(listOfInvoiceLineItem);
+				strInvoiceLineItem=strInvoiceLineItem == null ?'':String.escapeSingleQuotes(strInvoiceLineItem);
+
+				system.debug('---Hormesestr---'+strInvoiceLineItem);
+				amountTotal=0.0;
+				for(Invoice_Line_Item__c linItem : lstLinItem){
+					costType=linItem.Cost_Type__c;
+					LstBreakdown.add(linItem);
+					// if(linItem.International_Amount__c!= null){
+					// GrossTotal=GrossTotal+linItem.International_Amount__c;
+					// }
+					if(objInvoiceDetailsWrapper.objInvoiceToDisplay.VAT__c!=null&&objInvoiceDetailsWrapper.objInvoiceToDisplay!=null &&linItem.International_Amount__c!=null )
+					amountTotal+=(linItem.International_Amount__c+ (objInvoiceDetailsWrapper.objInvoiceToDisplay.VAT__c*linItem.International_Amount__c/100));
+					// if(linItem.Cost_Type__c == 'Breakdown'){
+					//     LstBreakdown.add(linItem);
+					// }
+					// if(linItem.Cost_Type__c == 'Category'){
+					//     LstCategry.add(linItem);
+					// }
+					// if(linItem.Cost_Type__c == 'Summary'){
+					//     LstSummery.add(linItem);
+
+					// }
+
+				}
+				if(totalFeeLines==null)
+				totalFeeLines=0.0;
+
+
+
+
+				objInvoiceDetailsWrapper.totalGrossAmountNew= objInvoiceDetailsWrapper.objInvoiceToDisplay.Total_Amount_Inc_Vat__c;
+				//amountTotal+(totalFeeLines+totalFeeLines*objInvoiceDetailsWrapper.objInvoiceToDisplay.vat__c/100);
+				// objInvoiceDetailsWrapper.totalGrossAmountNew=objInvoiceDetailsWrapper.totalGrossAmount;
+				strBreakdown= Json.serialize(LstBreakdown);
+				strBreakdown=strBreakdown == null ?'':String.escapeSingleQuotes(strBreakdown);
+
+				System.debug('------BreaakDown Json----'+strBreakdown);
+				//strCategry= Json.serialize(LstCategry);
+				// strSummery= Json.serialize(LstSummery);
+				Breakdown = true;
+				categry = false;
+				summery = false;
+
+				system.debug('---Hormesestr---'+  strBreakdown);
+
+				lstOfbooleanCostWrapper = new List < booleanCostWrapper > ();
+
+				Map < id, Invoice_Cost_Junction__c > MapIdCostInvoice = new Map < id, Invoice_Cost_Junction__c > ();
+
+				Schema.DescribeFieldResult fieldResult = Disbursements__c.Category__c.getDescribe();
+				List < Schema.PicklistEntry > ple = fieldResult.getPicklistValues();
+
+				system.debug('111'+ListCostInvoice);
+				for (Invoice_Cost_Junction__c CstInv: ListCostInvoice) {
+					MapIdCostInvoice.put(CstInv.Disbursement__c, CstInv);
+
+				}
+
+				/*for(Invoice_Cost_Junction__c CstInv: ListCostInvoice){
+			MapIdCostInvoice.put(CstInv.Disbursement__c, CstInv);
+
+		}*/
+				if(lstOpportunity!=null){
+					for (Disbursements__c CostList: lstDisbursments) {
+
+						if (MapIdCostInvoice.containsKey(CostList.id)) {
+							if (MapIdCostInvoice.get(CostList.id).Invoice__c == selectedid) {
+								lstOfbooleanCostWrapper.add(new booleanCostWrapper(true, CostList));
+							}
+						} else {
+
+							if(CostList.Status__c!= 'Invoiced'){
+								lstOfbooleanCostWrapper.add(new booleanCostWrapper(false, CostList));
+
+							}
+						}
+
+
+
+					}
+
+					strbooleanCostWrapper= Json.serialize(lstOfbooleanCostWrapper);
+					strbooleanCostWrapper=strbooleanCostWrapper == null ?'':String.escapeSingleQuotes(strbooleanCostWrapper);
+				}
+
+				system.debug('---Hormesestr---'+strbooleanCostWrapper);
+
+			}
+		}
+
+
+	}
+
+
+
+
+
+	public void AddCostRow() {
+
+
+		system.debug('---Hormesestr---'+strbooleanCostWrapper);
+		strbooleanCostWrapper=strbooleanCostWrapper.replace('\\\\\\\\\\\\','');
+		strbooleanCostWrapper=strbooleanCostWrapper.replace('\\\\\\\\\\','');
+		strbooleanCostWrapper=strbooleanCostWrapper.replace('\\\\\\\\','');
+		strbooleanCostWrapper=strbooleanCostWrapper.replace('\\\'','\'');
+		system.debug('LoggingLevel logLevel'+strbooleanCostWrapper);
+		if(strbooleanCostWrapper!=null && strbooleanCostWrapper!='')
+		lstOfbooleanCostWrapper= (List<booleanCostWrapper>)Json.deserialize(strbooleanCostWrapper,List<booleanCostWrapper>.class);
+
+		strbooleanCostWrapper=strbooleanCostWrapper == null ?'':String.escapeSingleQuotes(strbooleanCostWrapper);
+		toAddCost = new List < Disbursements__c > ();
+		Disbursements__c cst = new Disbursements__c();
+		cst.Job__c = strOpportunityID;
+		toAddCost.add(cst);
+	}
+
+	public void saveAll()
+	{
+		errorOnSave=false;
+		Savepoint sp = Database.setSavepoint();
+		if(toAddCost!=null)
+		toAddCost.clear();
+		boolean feelineAmountcheck = true;
+		//system.debug('1212'+objInvoiceDetailsWrapper.objInvoiceToDisplay.Invoice_Wording__c);
+		if(objInvoiceDetailsWrapper.objInvoiceToDisplay.is_International__c && objInvoiceDetailsWrapper.objInvoiceToDisplay.Invoice_Currency__c != 'GBP'){
+			if((objInvoiceDetailsWrapper.forecastFeeTotal-objInvoiceDetailsWrapper.totalFeeLines).round(System.RoundingMode.HALF_DOWN)!= 0){
+				feelineAmountcheck = false;
+			}
+		}else{
+			if((objInvoiceDetailsWrapper.forecastFeeTotal-objInvoiceDetailsWrapper.totalFeeLines)!= 0){
+				feelineAmountcheck = false;
+			}
+		}
+		if(isactiveinvoice){
+			if(feelineAmountcheck)
+			{
+				objModalWrapper.saveMessage=null;
+				try
+				{
+					if(objInvoiceDetailsWrapper.objInvoiceToDisplay.Invoice_Wording__c!=null){
+						// objInvoiceDetailsWrapper.objInvoiceToDisplay.Invoice_Wording__c= objInvoiceDetailsWrapper.objInvoiceToDisplay.Invoice_Wording__c.replace('&nbsp;',' ');
+						// objInvoiceDetailsWrapper.objInvoiceToDisplay.Invoice_Wording__c= objInvoiceDetailsWrapper.objInvoiceToDisplay.Invoice_Wording__c.replaceAll('[\\u00A0]',' ');
+					}
+
+					//  objInvoiceDetailsWrapper.objInvoiceToDisplay.Total_Fee__c= objInvoiceDetailsWrapper.totalFeeLines;
+					//objInvoiceDetailsWrapper.objInvoiceToDisplay.Total_cost__c= objInvoiceDetailsWrapper.totalGrossAmount;
+					if(objInvoiceDetailsWrapper.totalGrossAmount==null)
+					objInvoiceDetailsWrapper.totalGrossAmount=0.0;
+					if(objInvoiceDetailsWrapper.objInvoiceToDisplay.vat__c==null)
+					objInvoiceDetailsWrapper.objInvoiceToDisplay.vat__c=0.0;
+					//objInvoiceDetailsWrapper.objInvoiceToDisplay.Total__c=objInvoiceDetailsWrapper.totalFeeLines+objInvoiceDetailsWrapper.totalGrossAmount;
+					// objInvoiceDetailsWrapper.objInvoiceToDisplay.Amount_Inc_VAT__c=objInvoiceDetailsWrapper.totalFeeLines+objInvoiceDetailsWrapper.totalGrossAmount;
+
+
+
+					system.debug('111'+objInvoiceDetailsWrapper.objInvoiceToDisplay);
+					checkRecursiveInvoice.run = true;
+
+					if(!objInvoiceDetailsWrapper.objInvoiceToDisplay.is_International__c)
+					{
+						objInvoiceDetailsWrapper.objInvoiceToDisplay.Invoice_Currency__c='GBP';
+						objInvoiceDetailsWrapper.objInvoiceToDisplay.Foreign_Country__c=null;
+
+					}
+					update objInvoiceDetailsWrapper.objInvoiceToDisplay;
+
+					List<Invoice__c> lstInvoiceBalance = new List<Invoice__c>();
+					lstInvoiceBalance = [Select id, Name,
+					Balance_PO_to_be_Paid__c,
+					Status__c
+					From
+					Invoice__c
+					where
+					id = :objInvoiceDetailsWrapper.objInvoiceToDisplay.id
+					and Balance_PO_to_be_Paid__c != null
+					And ( Status__c = 'Paid' OR  Status__c = 'Printed'
+					OR  Status__c = 'Outstanding' OR  Status__c = 'Partial Paid'
+					OR  Status__c = 'Outstanding' OR  Status__c = 'Approved'
+					OR  Status__c = 'Cancelled' OR  Status__c = 'Partial' )
+					Limit 1];
+
+
+					decimal balancePayabale = 0.0;
+					decimal balancetoDeduct = 0.0;
+					System.debug('------mapPurchaseOrderJunctionInsertDel-----'+mapPurchaseOrderJunctionInsertDel.keyset());
+					for(PurchaseOrderWrapper objPurchaseOrderWrapper: lstPurchaseOrderWrapper){
+						if(objPurchaseOrderWrapper.objPurchaseOrder != null && objPurchaseOrderWrapper.objPurchaseOrder.id != null){
+							Purchase_Order_Invoice_Junction__c objPurchaseOrderJunction = new Purchase_Order_Invoice_Junction__c();
+							if(objPurchaseOrderWrapper.isSelected){
+								if(!mapPurchaseOrderJunctionInsertDel.containsKey(objPurchaseOrderWrapper.objPurchaseOrder.id)){
+									objPurchaseOrderJunction.Invoice__c = objInvoiceDetailsWrapper.objInvoiceToDisplay.id;
+									objPurchaseOrderJunction.Purchase_Order__c = objPurchaseOrderWrapper.objPurchaseOrder.id;
+									decimal balancePayabaleEach = 0.0;
+									if(objPurchaseOrderWrapper.objPurchaseOrder.BalanceAmount__c != null && (
+												objPurchaseOrderWrapper.objPurchaseOrder.PO_Status__c.equalsIgnoreCase('Original') ||
+												objPurchaseOrderWrapper.objPurchaseOrder.PO_Status__c.equalsIgnoreCase('Orginal') ||
+												objPurchaseOrderWrapper.objPurchaseOrder.PO_Status__c.equalsIgnoreCase('Amended - Approved'))){
+										balancePayabaleEach = objPurchaseOrderWrapper.objPurchaseOrder.BalanceAmount__c;
+									}
+									balancePayabale = balancePayabale+balancePayabaleEach;
+									System.debug('------balancePayabaleEach-----'+balancePayabaleEach);
+									lstPurchaseOrderInvoiceToInsert.add(objPurchaseOrderJunction);
+
+								}else{
+									decimal balancePayabaleEach = 0.0;
+									if(objPurchaseOrderWrapper.objPurchaseOrder.BalanceAmount__c != null && (
+												objPurchaseOrderWrapper.objPurchaseOrder.PO_Status__c.equalsIgnoreCase('Original') ||
+												objPurchaseOrderWrapper.objPurchaseOrder.PO_Status__c.equalsIgnoreCase('Orginal') ||
+												objPurchaseOrderWrapper.objPurchaseOrder.PO_Status__c.equalsIgnoreCase('Amended - Approved'))){
+										balancePayabaleEach = objPurchaseOrderWrapper.objPurchaseOrder.BalanceAmount__c;
+									}
+									balancePayabale = balancePayabale+balancePayabaleEach;
+								}
+							}else{
+								if(mapPurchaseOrderJunctionInsertDel.containsKey(objPurchaseOrderWrapper.objPurchaseOrder.id)){
+									objPurchaseOrderJunction = mapPurchaseOrderJunctionInsertDel.get(objPurchaseOrderWrapper.objPurchaseOrder.id);
+									decimal balancePayabaleEach = 0.0;
+									if(objPurchaseOrderJunction.Amount_Paid__c != null){
+										balancePayabaleEach = objPurchaseOrderJunction.Amount_Paid__c;
+									}
+									balancetoDeduct = balancetoDeduct+balancePayabaleEach;
+									lstPurchaseOrderInvoiceToDel.add(objPurchaseOrderJunction);
+								}
+							}
+						}
+						System.debug('------balancePayabale-----'+balancePayabale);
+					}
+					// System.debug('------PurchaseOrderJunctionDel-----'+lstPurchaseOrderInvoiceToDel);
+					if(!lstInvoiceBalance.isEmpty()){
+						System.debug('------balancePayabale-----'+balancePayabale);
+						System.debug('------Available-----'+lstInvoiceBalance[0].Balance_PO_to_be_Paid__c);
+						if(isPOChanged){
+							if(balancePayabale < (lstInvoiceBalance[0].Balance_PO_to_be_Paid__c+balancetoDeduct)){
+								errorOnSave=true;
+								throw new CS_CustomException('Due to addition/removal of Purchase Orders, the Total PO Amount has become less than the Net Fees. Please increase the PO Amount or add new Purchase Orders.');
+							}
+						}
+					}
+
+					checkRecursiveInvoice.run = true;
+					checkRecursivePurchaseOrderInvoice.run=true;
+					if(!lstPurchaseOrderInvoiceToInsert.isEmpty()){
+						insert lstPurchaseOrderInvoiceToInsert;
+					}
+
+
+					System.debug('------PurchaseOrderJunctionDel-----'+lstPurchaseOrderInvoiceToDel);
+					checkRecursiveInvoice.run = true;
+					checkRecursivePurchaseOrderInvoice.run=true;
+					if(!lstPurchaseOrderInvoiceToDel.isEmpty()){
+						delete lstPurchaseOrderInvoiceToDel;
+					}
+					checkRecursiveInvoice.run = true;
+					if( objInvoiceDetailsWrapper.objInvoiceToDisplay.status__c=='Draft')
+					{
+
+						system.debug('12123'+objInvoiceDetailsWrapper.objInvoiceToDisplay.Invoice_Wording__c);
+
+						lstLinItem=[select id, Fee__c,IsFromAllocation__c,Invoice__c,type__c,International_Amount__c,VAT_Amount__c,VAT_Amount_Prec__c, Description__c,Cost_Type__c from Invoice_Line_Item__c where
+						Invoice__c = :selectedId ];
+						list < Invoice_Cost_Junction__c > ListCostInvoice = new list < Invoice_Cost_Junction__c > ();
+
+						ListCostInvoice = [select id, Disbursement__c, Invoice__c from Invoice_Cost_Junction__c where Invoice__c=:selectedid limit 49999];
+
+						list < Invoice_Allocation_Junction__c >      lstInvoiceAllocation = [Select id, name,
+						Allocation__c,
+						Amount__c,
+						Forecasting__c,
+						International_Amount__c,
+						Invoice__c,
+
+						Master_Amount__c
+						From
+						Invoice_Allocation_Junction__c
+						where
+						Invoice__c = : selectedId and Forecasting__c != null limit 49999];
+						system.debug('112'+objInvoiceDetailsWrapper.objInvoiceToDisplay);
+
+
+
+
+
+
+						if(lstLinItem!=null)
+						delete lstLinItem;
+
+						if(ListCostInvoice!=null && ListCostInvoice.size()>0 )
+						delete ListCostInvoice;
+						if(lstInvoiceAllocation!=null && lstInvoiceAllocation.size()>0 )
+						delete lstInvoiceAllocation;
+
+						// delete ListCostInvoice;
+						// delete lstInvoiceAllocation;
+
+						//   strForeCastWrapper
+						//   strInvoiceLineItem
+						//   strbooleanCostWrapper
+						//   strBreakdown
+						system.debug('11231'+strForeCastWrapper);
+						if(strForeCastWrapper!=null && strForeCastWrapper!='')
+						{
+							strForeCastWrapper=strForeCastWrapper.replace('\\\'','\'');
+							lstForeCastWrapper= (List<ForecastWrapper>)Json.deserialize(strForeCastWrapper,List<ForecastWrapper>.class);
+						}
+
+						if(strInvoiceLineItem!=null && strInvoiceLineItem!='')
+						{
+							strInvoiceLineItem=strInvoiceLineItem.replace('\\\'','\'');
+							listOfInvoiceLineItem= (List<Invoice_Line_Item__c>)Json.deserialize(strInvoiceLineItem,List<Invoice_Line_Item__c>.class);
+						}
+						// boolean flagline=false;
+						// if(lstForeCastWrapper!=null)
+						// {
+						// for(Integer i=0;i<lstForeCastWrapper.size();i++)
+						// {
+						//     if(lstForeCastWrapper[i].isSelected)
+						//     {
+						//         flagline=true;
+						//     }
+
+						// }
+						// }
+						// if(!flagline)
+						// {
+						//     listOfInvoiceLineItem = new List<Invoice_Line_Item__c>();
+						// }
+
+						if(strBreakdown!=null && strBreakdown!='')
+						{
+							strBreakdown=strBreakdown.replace('\\\'','\'');
+							LstBreakdown= (List<Invoice_Line_Item__c>)Json.deserialize(strBreakdown,List<Invoice_Line_Item__c>.class);
+						}
+
+						System.debug('------BreaakDown Json----'+listOfInvoiceLineItem);
+						//     if(strCategry!=null && strCategry!='')
+						//   LstCategry= (List<Invoice_Line_Item__c>)Json.deserialize(strCategry,List<Invoice_Line_Item__c>.class);
+						//     if(strSummery!=null && strSummery!='')
+						//   LstSummery= (List<Invoice_Line_Item__c>)Json.deserialize(strSummery,List<Invoice_Line_Item__c>.class);
+
+						if(strbooleanCostWrapper!=null && strbooleanCostWrapper!='')
+						{
+							strbooleanCostWrapper=strbooleanCostWrapper.replace('\\\\\\\\\\\\','');
+							strbooleanCostWrapper=strbooleanCostWrapper.replace('\\\\\\\\\\','');
+							strbooleanCostWrapper=strbooleanCostWrapper.replace('\\\\\\\\','');
+							strbooleanCostWrapper=strbooleanCostWrapper.replace('\\\'','\'');
+							system.debug('11---'+strbooleanCostWrapper);
+							lstOfbooleanCostWrapper= (List<booleanCostWrapper>)Json.deserialize(strbooleanCostWrapper,List<booleanCostWrapper>.class);
+						}
+
+						List<Invoice_Cost_Junction__c> disbursmentJunctionList = new List<Invoice_Cost_Junction__c>();
+						for(booleanCostWrapper bcostWrap : lstOfbooleanCostWrapper)
+						{
+							if(bcostWrap.isSelecteds)
+							{
+								Invoice_Cost_Junction__c iCOst = new Invoice_Cost_Junction__c();
+								iCOst.Disbursement__c=bcostWrap.objCost.id;
+								iCost.Invoice__c=objInvoiceDetailsWrapper.objInvoiceToDisplay.id;
+								disbursmentJunctionList.add(iCost);
+							}
+
+						}
+
+
+
+						List<Invoice_Allocation_Junction__c> invoiceAllocationList = new List<Invoice_Allocation_Junction__c>();
+
+						for (ForecastWrapper fc : lstForeCastWrapper)
+						{
+
+							if(fc.isSelected)
+							{
+								if(fc.OrginalFeeAmount+fc.AccrualAmount>=fc.forecastFeeAmount)
+								{
+
+									Invoice_Allocation_Junction__c iallocation = new Invoice_Allocation_Junction__c();
+									iallocation.Allocation__c=fc.objForecasting.Allocation__c;
+									iallocation.Forecasting__c=fc.objForecasting.id;
+									iallocation.Amount__c=fc.forecastFeeAmount;
+									iallocation.Invoice__c=objInvoiceDetailsWrapper.objInvoiceToDisplay.id;
+									invoiceAllocationList.add(iallocation);
+
+
+								}
+								else
+								{
+									// if( objInvoiceDetailsWrapper.objInvoiceToDisplay.status__c=='Draft')
+									{
+
+										errorOnSave=true;
+										throw new CS_CustomException('Invoice amount has to be less than forecast');
+									}
+								}
+							}
+
+						}
+						for (integer i=0;i< LstBreakdown.size();i++)
+						{
+							LstBreakdown[i].id=null;
+							//   LstBreakdown[i].VAT_Amount__c=0.0;
+							//   if(LstBreakdown[i].International_Amount__c!=null && objInvoiceDetailsWrapper.objInvoiceToDisplay.VAT__c!=null && )
+							//   LstBreakdown[i].VAT_Amount__c=LstBreakdown[i].International_Amount__c*objInvoiceDetailsWrapper.objInvoiceToDisplay.VAT__c/100;
+
+							if(LstBreakdown[i].International_Amount__c!=null)
+							LstBreakdown[i].Fee__c=LstBreakdown[i].International_Amount__c+LstBreakdown[i].VAT_Amount__c;
+							LstBreakdown[i].IsFromAllocation__c=false;
+							if(objInvoiceDetailsWrapper.objInvoiceToDisplay.Invoice_Currency__c==null || objInvoiceDetailsWrapper.objInvoiceToDisplay.Invoice_Currency__c=='GBP')
+							{
+								LstBreakdown[i].Amount_ex_VAT__c=LstBreakdown[i].International_Amount__c;
+
+							}
+
+
+						}
+						//   for (integer i=0;i< LstCategry.size();i++)
+						//   {
+						//       LstCategry[i].id=null;
+
+						//   }
+						//   for (integer i=0;i< LstSummery.size();i++)
+						//   {
+						//       LstSummery[i].id=null;
+
+						//   }
+						for (integer i=0;i< listOfInvoiceLineItem.size();i++)
+						{
+							listOfInvoiceLineItem[i].id=null;
+							if(objInvoiceDetailsWrapper.objInvoiceToDisplay.VAT__c!=null &&  listOfInvoiceLineItem[i].Type__C=='Cost')
+							{
+
+								// listOfInvoiceLineItem[i].VAT_Amount__c=listOfInvoiceLineItem[i].International_Amount__c*objInvoiceDetailsWrapper.objInvoiceToDisplay.VAT__c/100;
+
+							}   if( listOfInvoiceLineItem[i].Type__C=='Fee')
+							{
+								//   Decimal tempVatamnt=listOfInvoiceLineItem[i].International_Amount__c*objInvoiceDetailsWrapper.objInvoiceToDisplay.VAT__c/100;
+								//   listOfInvoiceLineItem[i].VAT_Amount__c= tempVatamnt.setScale(2,System.RoundingMode.FLOOR);
+
+								listOfInvoiceLineItem[i].VAT_Amount__c=listOfInvoiceLineItem[i].International_Amount__c*objInvoiceDetailsWrapper.objInvoiceToDisplay.VAT__c/100;
+								Double tempVat =(listOfInvoiceLineItem[i].International_Amount__c*objInvoiceDetailsWrapper.objInvoiceToDisplay.VAT__c);
+								listOfInvoiceLineItem[i].VAT_Amount_Prec__c=tempVat;
+								listOfInvoiceLineItem[i].VAT_Amount_Prec__c= listOfInvoiceLineItem[i].VAT_Amount_Prec__c /100.00;
+								system.debug('----Vatamount---'+listOfInvoiceLineItem[i].VAT_Amount_Prec__c);
+								listOfInvoiceLineItem[i].IsFromAllocation__c=true;
+							}
+							else
+							{
+								listOfInvoiceLineItem[i].IsFromAllocation__c=false;
+							}
+							if(objInvoiceDetailsWrapper.objInvoiceToDisplay.Invoice_Currency__c==null || objInvoiceDetailsWrapper.objInvoiceToDisplay.Invoice_Currency__c=='GBP')
+							{
+								listOfInvoiceLineItem[i].Amount_ex_VAT__c=listOfInvoiceLineItem[i].International_Amount__c;
+							}
+						}
+						system.debug('Hormese'+listOfInvoiceLineItem);
+
+						// upsert fcList;
+
+						insert listOfInvoiceLineItem;
+						//  if(costType=='Breakdown')
+						insert LstBreakdown;
+						// if(costType=='Category')
+						//   insert LstCategry;
+						//   if(costType=='Summary')
+						//   insert LstSummery;
+
+						checkRecursiveInvoiceForecasting.run = true;
+						insert invoiceAllocationList;
+						checkRecursiveInvoiceCost.run = true;
+						insert disbursmentJunctionList;
+						// System.debug('------lstPurchaseOrderInvoiceToInsert-----'+lstPurchaseOrderInvoiceToInsert);
+						// checkRecursiveInvoice.run = true;
+						// checkRecursivePurchaseOrderInvoice.run=true;
+						// if(!lstPurchaseOrderInvoiceToInsert.isEmpty()){
+						// insert lstPurchaseOrderInvoiceToInsert;
+						// }
+
+
+						// System.debug('------PurchaseOrderJunctionDel-----'+lstPurchaseOrderInvoiceToDel);
+						// checkRecursiveInvoice.run = true;
+						// checkRecursivePurchaseOrderInvoice.run=true;
+						// if(!lstPurchaseOrderInvoiceToDel.isEmpty()){
+						// delete lstPurchaseOrderInvoiceToDel;
+						// }
+
+						//logic added for Defect D-450
+	                    pdfTabSuccess = pdfTabFailed = false;
+	                    pdfTabMessage = '';
+	                    if(showPDFTab && selectedId == pdfInvoice.Id && pdfAmountTotal > 0.00){
+	                        if( updatePDFValues() == false)
+	                            return;
+	                    }
+	                    //end of new logic
+
+						LstBreakdown.clear();
+						lstForeCastWrapper.clear();
+
+						lstLinItem.clear();
+						listOfInvoiceLineItem.clear();
+						refreshAll();
+						objModalWrapper = new ModalWrapper();
+						objModalWrapper.saveMessage='All Changes have been saved successfully!';
+
+						for(PurchaseOrderWrapper objPurchaseOrderWrapperFinal: lstPurchaseOrderWrapper){
+							objPurchaseOrderWrapperFinal.isCurrentContext = false;
+						}
+
+					}
+
+				}
+				catch (Exception e)
+				{
+					errorOnSave=true;
+
+					String errorMsg = e.getMessage();
+					if(errorMsg.contains('FIELD_CUSTOM_VALIDATION_EXCEPTION')){
+						errorMsg = errorMsg.substringBetween('FIELD_CUSTOM_VALIDATION_EXCEPTION, ', ': ');
+					}else if(errorMsg.contains('FIELD_FILTER_VALIDATION_EXCEPTION')){
+						errorMsg = errorMsg.substringBetween('FIELD_FILTER_VALIDATION_EXCEPTION, ', ': ');
+					}
+					objModalWrapper = new ModalWrapper(errorMsg);
+
+
+					System.debug(e);
+					System.debug('----HereinsideException----');
+					// objModalWrapper = new ModalWrapper('Oops..Fatal Error while saving! Please try again!'+ e.getMessage());
+
+
+					Database.rollback( sp );
+
+				}
+
+			}
+			else
+			{
+
+				{
+
+					errorOnSave=true;
+					objModalWrapper = new ModalWrapper('Fee lines should  add upto Allocation amounts ');
+				}
+			}
+		}else{
+			errorOnSave=true;
+			objModalWrapper = new ModalWrapper('Job Manager’s Coding Structure is Inactive – Please contact the System Administrator to change the job manager on the job');
+		}
+
+	}
+	//create junction object for the selected cost and update cost details
+	Public void UpdateBreakdownCost() {
+		objModalWrapper = new ModalWrapper();
+
+		try
+		{
+			system.debug('--1'+toAddCost);
+			if (toAddCost!=null && toAddCost.size()>= 1) {
+				integer pos=toAddCost.size()-1;
+				toAddCost[pos].Purchase_Cost__c=toAddCost[pos].Recharge_Cost__c;
+				toAddCost[pos].Recoverable__c=true;
+				toAddCost[pos].Description__c=toAddCost[pos].Invoice_Details__c;
+				system.debug('--1'+toAddCost);
+				insert toAddCost;
+				system.debug('--1'+toAddCost);
+				if(strbooleanCostWrapper!=null && strbooleanCostWrapper!='')
+				{
+					lstOfbooleanCostWrapper= (List<booleanCostWrapper>)Json.deserialize(strbooleanCostWrapper,List<booleanCostWrapper>.class);
+				}
+
+
+				LIST<Disbursements__c> CostList= [select Description__c, Category__c,Invoice_Details__c , Sub_Category__c, status__c,Purchase_Date__c, VAT_Applicable__c, Created_For__c, Created_For__r.name, Recharge_Cost__c from Disbursements__c where id=: toAddCost[pos].id order by CreatedDate desc Limit 700];
+				//LIST<Disbursements__c> tempList= new List<Disbursements__c>();
+				//tempList.add(toAddCost);
+				system.debug('--1'+CostList);
+				newCostString=Json.serialize(new booleanCostWrapper(true, CostList[0])) ;
+				system.debug('--1'+newCostString);
+				newCostString=newCostString==null ? '':String.escapeSingleQuotes(newCostString);
+				system.debug('--3'+newCostString);
+				strbooleanCostWrapper=strbooleanCostWrapper==null ? '':String.escapeSingleQuotes(strbooleanCostWrapper);
+
+				if(lstOfbooleanCostWrapper!=null)
+				{
+					lstOfbooleanCostWrapper.add(new booleanCostWrapper(true, CostList[0]));
+				}
+				else
+				{
+					lstOfbooleanCostWrapper = new List<booleanCostWrapper>();
+					lstOfbooleanCostWrapper.add(new booleanCostWrapper(true, CostList[0]));
+				}
+				system.debug('--2'+strbooleanCostWrapper);
+
+			}
+			else
+			{
+				newCostString='error';
+			}
+			AddCostRow();
+			//system.debug('--'+newCostString);
+		}
+		catch (Exception e)
+		{
+			String errorMsg = e.getMessage();
+			objModalWrapper = new ModalWrapper(errorMsg);
+			if(errorMsg.contains('FIELD_CUSTOM_VALIDATION_EXCEPTION')){
+				errorMsg = errorMsg.substringBetween('FIELD_CUSTOM_VALIDATION_EXCEPTION, ', ': ');
+			}else if(errorMsg.contains('FIELD_FILTER_VALIDATION_EXCEPTION')){
+				errorMsg = errorMsg.substringBetween('FIELD_FILTER_VALIDATION_EXCEPTION, ', ': ');
+			}
+			else
+			{
+				errorMsg = errorMsg.substringBetween('Error occured while saving. Please retry!');
+			}
+			objModalWrapper = new ModalWrapper(errorMsg);
+			newCostString='error';
+			// objModalWrapper = new ModalWrapper(e.getmess);
+			AddCostRow();
+		}
+
+
+
+
+	}
+	public void updateVatCalculations()
+	{
+		// saveall();
+		// selectedInvoiceDetails();
+		if(strForeCastWrapper!=null && strForeCastWrapper!='')
+		lstForeCastWrapper= (List<ForecastWrapper>)Json.deserialize(strForeCastWrapper,List<ForecastWrapper>.class);
+
+		if(strInvoiceLineItem!=null && strInvoiceLineItem!='')
+		listOfInvoiceLineItem= (List<Invoice_Line_Item__c>)Json.deserialize(strInvoiceLineItem,List<Invoice_Line_Item__c>.class);
+
+		if(strBreakdown!=null && strBreakdown!='')
+		LstBreakdown= (List<Invoice_Line_Item__c>)Json.deserialize(strBreakdown,List<Invoice_Line_Item__c>.class);
+		//     if(strCategry!=null && strCategry!='')
+		//   LstCategry= (List<Invoice_Line_Item__c>)Json.deserialize(strCategry,List<Invoice_Line_Item__c>.class);
+		//     if(strSummery!=null && strSummery!='')
+		//   LstSummery= (List<Invoice_Line_Item__c>)Json.deserialize(strSummery,List<Invoice_Line_Item__c>.class);
+
+		if(strbooleanCostWrapper!=null && strbooleanCostWrapper!='')
+		lstOfbooleanCostWrapper= (List<booleanCostWrapper>)Json.deserialize(strbooleanCostWrapper,List<booleanCostWrapper>.class);
+		if(objInvoiceDetailsWrapper.totalGrossAmount==null)
+		objInvoiceDetailsWrapper.totalGrossAmount=0.0;
+		if(objInvoiceDetailsWrapper.objInvoiceToDisplay.vat__c==null)
+		objInvoiceDetailsWrapper.objInvoiceToDisplay.vat__c=0.0;
+		strbooleanCostWrapper=strbooleanCostWrapper==null ? '':String.escapeSingleQuotes(strbooleanCostWrapper);
+		system.debug('---vat%'+strbooleanCostWrapper);
+		objInvoiceDetailsWrapper.totalGrossAmountNew=objInvoiceDetailsWrapper.totalGrossAmount+(objInvoiceDetailsWrapper.totalFeeLines+objInvoiceDetailsWrapper.totalFeeLines*objInvoiceDetailsWrapper.objInvoiceToDisplay.vat__c/100);
+
+
+	}
+
+	// public class CostCategoryWrapper {
+	// Public Boolean IsCategorySelected {
+	// get;
+	// set;
+	// }
+	// public string Categry {
+	// get;
+	// set;
+	// }
+	// Public String CreatedFor {
+	// get;
+	// set;
+	// }
+	// public Decimal Amnt {
+	// get;
+	// set;
+	// }
+	// public Decimal Vat {
+	// get;
+	// set;
+	// }
+	// public Decimal Total {
+	// get;
+	// set;
+	// }
+
+
+	// public CostCategoryWrapper(Boolean IsCategorySelecteds, string Categrys, Decimal Amnts, Decimal Vats, Decimal Totals, String CreatedFors) {
+	// IsCategorySelected = IsCategorySelecteds;
+	// Categry = Categrys;
+	// Amnt = Amnts;
+	// Vat = Vats;
+	// Total = Totals;
+	// CreatedFor = CreatedFors;
+
+
+	// }
+	// }
+
+	Public Boolean updatePDFValues(){
+		if(pdfInvoice.Total_PDF_Amount__c == pdfAmountTotal){
+			//re-retreive new Invoice Line Items related to selected Invoice
+			// as previous Invoice line items have been deleted
+			List<Invoice_Line_Item__c> invLineItemList = new List<Invoice_Line_Item__c>();
+			List<Invoice_Line_Item__c> mergedList = new List<Invoice_Line_Item__c>();
+			invLineItemList = [Select Id, Name, Description__c, Is_International__c, Type__c, Amount_ex_VAT__c,
+					International_Amount__c, International_VAT_Amount_Formula__c, VAT_Amount__c,Amount_ex_VAT_Formula__c,
+					PDF_Amount__c, PDF_VAT__c
+				From Invoice_Line_Item__c Where Invoice__c =: selectedId
+			];
+			Map<String,Invoice_Line_Item__c> invLineItemMap = new Map<String,Invoice_Line_Item__c>();
+			for(Invoice_Line_Item__c invLineItem: invLineItemList){
+				String keyString = invLineItem.Description__c + invLineItem.Type__c + String.valueOf(invLineItem.Amount_ex_VAT_Formula__c);
+				invLineItemMap.put(keyString,invLineItem);
+			}
+			//merge old line item list and set their PDF amount & PDF vat values in new list Items
+			// using map (key -> Description + Category)
+			for(Invoice_Line_Item__c invLineItem : feesList)
+				mergedList.add(invLineItem);
+			for(Invoice_Line_Item__c invLineItem : costsList)
+				mergedList.add(invLineItem);
+			for(Invoice_Line_Item__c invLineItem:mergedList){
+				String keyString = invLineItem.Description__c + invLineItem.Type__c + String.valueOf(invLineItem.Amount_ex_VAT_Formula__c);
+				Invoice_Line_Item__c tempInv = invLineItemMap.get(keyString);
+				tempInv.PDF_Amount__c = invLineItem.PDF_Amount__c;
+				tempInv.PDF_VAT__c = invLineItem.PDF_VAT__c;
+			}
+			try{
+				update invLineItemList;
+				pdfTabMessage = 'Data Saved Successfully';
+				pdfTabSuccess = true;
+				return true;
+			}catch(Exception ex){
+				//add page error message
+				pdfTabFailed = true;
+				pdfTabMessage = ex.getMessage();
+			}
+		}
+		else{
+			pdfTabFailed = true;
+			pdfTabMessage = 'Total Amount don\'t match';
+		}
+		return false;
+
+	}
+
+
+	Public pagereference draftpdfCheck() {
+
+		List<Invoice__c> invList=new List<Invoice__c>();
+		invList=[select OriginalInvoicePrinted__c,Assigned_Invoice_Number__c,Printed_Date__c,id,status__c,Amount_Inc_VAT__c  from Invoice__c where id=: objInvoiceDetailsWrapper.objInvoiceToDisplay.id limit 1 ];
+		Invoice__c objInvoiceSelected=  invList[0];
+		objInvoiceSelected.Printed_Date__c= System.today();
+
+
+		system.debug('-----11');
+
+		String original ='Copy';
+		string IsDraftOrApproved= null;
+		String draftname='';
+		if(objInvoiceSelected.status__c!='Draft'){
+
+
+			if(objInvoiceSelected.OriginalInvoicePrinted__c!= true){
+
+
+				objInvoiceSelected.OriginalInvoicePrinted__c=true;
+
+
+				Blob body;
+				Blob bodyCopy;
+				Attachment attach = new Attachment();
+				Attachment attachCopy = new Attachment();
+				try {
+
+					PageReference pdf = Page.CS_InvoicePDFView;
+					pdf.getParameters().put('invid',objInvoiceSelected.id);
+
+					// create the new attachment
+
+
+					// the contents of the attachment from the pdf
+
+
+					pdf.getParameters().put('Copy','FINAL');
+					PageReference pdfCopy = Page.CS_InvoicePDFView;
+					pdfCopy.getParameters().put('invid',objInvoiceSelected.id);
+					pdfCopy.getParameters().put('Copy','COPY');
+
+					// create the new attachment
+
+
+					// the contents of the attachment from the pdf
+
+					// returns the output of the page as a PDF
+					body = pdf.getContentAsPDF();
+					bodyCopy = pdfCopy.getContentAsPDF();
+					system.debug('body should be fine');
+
+					// need to pass unit test -- current bug
+				} catch (VisualforceException e) {
+					system.debug('in the catch block');
+					body = Blob.valueOf('Error');
+				}
+
+				attach.Body = body;
+
+
+
+				if(objInvoiceSelected.Assigned_Invoice_Number__c== null){
+					attach.Name ='Original'+'_'+lstOpportunity[0].Job_Number__c +'_'+ lstOpportunity[0].name  + '.pdf';
+				}
+				else{
+					attach.Name ='Original'+'_'+lstOpportunity[0].Job_Number__c +'_'+ objInvoiceSelected.Assigned_Invoice_Number__c +'_'+ lstOpportunity[0].name  + '.pdf';
+				}
+
+				// add the user entered name
+				/* attach.Name =IsDraftOrApproved+listInvoive[0].Job_Number__c + selectedInvoice.Assigned_Invoice_Number__c + listInvoive[0].name  + '.pdf';*/
+				attach.IsPrivate = false;
+				// attach the pdf to the account
+				attach.ParentId = objInvoiceSelected.id;
+				try{
+					insert attach;
+				} catch (Exception e) {
+					ApexPages.addMessages(e);
+				}
+
+				attachCopy.Body = bodyCopy;
+
+
+
+				if(objInvoiceSelected.Assigned_Invoice_Number__c== null){
+					attachCopy.Name ='Copy'+'_'+lstOpportunity[0].Job_Number__c +'_'+ lstOpportunity[0].name  + '.pdf';
+				}
+				else{
+					attachCopy.Name ='Copy'+'_'+lstOpportunity[0].Job_Number__c +'_'+ objInvoiceSelected.Assigned_Invoice_Number__c +'_'+ lstOpportunity[0].name  + '.pdf';
+				}
+
+				// add the user entered name
+				/* attach.Name =IsDraftOrApproved+listInvoive[0].Job_Number__c + selectedInvoice.Assigned_Invoice_Number__c + listInvoive[0].name  + '.pdf';*/
+				attachCopy.IsPrivate = false;
+				// attach the pdf to the account
+				attachCopy.ParentId = objInvoiceSelected.id;
+				try{
+					insert attachCopy;
+				} catch (Exception e) {
+					ApexPages.addMessages(e);
+				}
+
+
+
+				// if(lstOpportunity[0].IsWon!=true){
+				try{
+					update objInvoiceSelected;
+					IsDraftOrApproved='FINAL';
+					draftname='Original';
+				} catch (Exception e) {
+					ApexPages.addMessages(e);
+				}
+				// }
+
+			}
+		}
+		if(objInvoiceSelected.OriginalInvoicePrinted__c== true && IsDraftOrApproved!='FINAL' && objInvoiceSelected.status__c!= 'Draft'){
+			IsDraftOrApproved='COPY';
+
+		}
+
+		else if(objInvoiceSelected.status__c== 'Draft'){
+			IsDraftOrApproved='DRAFT';
+		}
+		original=IsDraftOrApproved;
+
+
+		//   if(objInvoiceSelected.status__c!= 'Draft')
+		//   {
+
+		//   }
+
+
+
+
+
+
+
+		system.debug('-----22');
+
+
+
+
+
+
+		PageReference redirectPage = new PageReference('/apex/CS_InvoicePDFView');
+
+		// redirectPage.setRedirect(true);
+		//As per JM
+		redirectPage.getParameters().put('invid',selectedId);
+		redirectPage.getParameters().put('Copy',Original);
+		pdfPageURLString = redirectPage.getUrl();
+		return null;
+		// return null;
+
+	}
+
+	public void processPayment()
+	{
+		try
+		{
+			invoicePayment.status__c='Paid';
+			IsAssignBtn=true;
+			invoicePayment.invoice__c=objInvoiceDetailsWrapper.objInvoiceToDisplay.id;
+
+			List<Staff__c> sf = [Select id from Staff__c where User__c = : userinfo.getUserId() ];
+			if(sf!=null && !sf.isEmpty())
+			{
+				invoicePayment.Processed_By__c=sf[0].id;
+
+			}
+			// checkRecursiveInvoice.run= false;
+			upsert invoicePayment;
+
+			if(objInvoiceDetailsWrapper.objInvoiceToDisplay.Paid_Date__c==null || invoicePayment.Payment_Date__c>objInvoiceDetailsWrapper.objInvoiceToDisplay.Paid_Date__c)
+			objInvoiceDetailsWrapper.objInvoiceToDisplay.Paid_Date__c=invoicePayment.Payment_Date__c;
+			if(invoicePayment.Is_Final_Payment__c)
+			{
+				objInvoiceDetailsWrapper.objInvoiceToDisplay.status__c='Paid';
+				objInvoiceDetailsWrapper.objInvoiceToDisplay.Paid_Date__c=invoicePayment.Payment_Date__c;
+				if(objInvoiceDetailsWrapper.objInvoiceToDisplay.Payment_Charges__c=='Bad Debt')
+				{
+					objInvoiceDetailsWrapper.objInvoiceToDisplay.Bad_Debt_Created_Date__c= system.today();
+				}
+				else if(objInvoiceDetailsWrapper.objInvoiceToDisplay.Payment_Charges__c=='Foreign Exchange')
+				{
+					objInvoiceDetailsWrapper.objInvoiceToDisplay.FE_Write_Of_Created_Date__c= system.today();
+				}
+				else if(objInvoiceDetailsWrapper.objInvoiceToDisplay.Payment_Charges__c=='Write Off')
+				{
+					objInvoiceDetailsWrapper.objInvoiceToDisplay.Written_Off_Date__c= system.today();
+				}
+
+				checkRecursiveInvoice.run= true;
+				System.debug('----Invoice Status-----'+objInvoiceDetailsWrapper.objInvoiceToDisplay.status__c);
+				update objInvoiceDetailsWrapper.objInvoiceToDisplay;
+
+			}
+			// checkRecursiveInvoice.run= true;
+			// System.debug('----Invoice Status-----'+objInvoiceDetailsWrapper.objInvoiceToDisplay.status__c);
+			// update objInvoiceDetailsWrapper.objInvoiceToDisplay;
+
+			refreshAll();
+		}
+		catch (exception e)
+		{
+			objInvoiceDetailsWrapper.objInvoiceToDisplay.status__c='Approved';
+
+			String errorMsg = e.getMessage();
+			if(errorMsg.contains('FIELD_CUSTOM_VALIDATION_EXCEPTION')){
+				errorMsg = errorMsg.substringBetween('FIELD_CUSTOM_VALIDATION_EXCEPTION, ', ': ');
+			}else if(errorMsg.contains('FIELD_FILTER_VALIDATION_EXCEPTION')){
+				errorMsg = errorMsg.substringBetween('FIELD_FILTER_VALIDATION_EXCEPTION, ', ': ');
+			}
+			objModalWrapper = new ModalWrapper(errorMsg);
+		}
+		invoicePayment = new Invoice_Payment__c();
+		//invoicePayment.Amount__c=objInvoice.Payment_Balance__c;
+
+	}
+
+	public void unpayInvoice()
+	{
+		try
+		{
+			List<Invoice_Payment__c> invPayment=  [select id,Reversed_By__c from Invoice_Payment__c where Invoice__c= : objInvoiceDetailsWrapper.objInvoiceToDisplay.id and status__c !='Reversed'];
+
+			List<Staff__c> sf = [Select id from Staff__c where User__c = : userinfo.getUserId() ];
+			if(sf!=null && !sf.isEmpty())
+			{
+				for(Invoice_Payment__c invPay :invPayment )
+				{
+
+					invpay.Reversed_By__c=sf[0].id;
+				}
+				// checkrecursiveInvoice.run = false;
+				if(invPayment!=null)
+				update invPayment;
+			}
+			objInvoiceDetailsWrapper.objInvoiceToDisplay.status__c= 'Printed';
+			objInvoiceDetailsWrapper.objInvoiceToDisplay.Paid_Date__c=null;
+			IsAssignBtn=true;
+			// checkrecursiveInvoice.run = false;
+			update objInvoiceDetailsWrapper.objInvoiceToDisplay;
+			refreshAll();
+		}
+		catch(exception e)
+		{
+			objModalWrapper = new ModalWrapper('Couldnt unpay the invoice. Please retry!! '+e.getMessage());
+
+		}
+
+	}
+	@RemoteAction
+	global static decimal convertCurrency(decimal currentAmount, String currencyCode, boolean isGBPtoForeignCurrency) {
+		decimal convertedAmount;
+		if(!String.isBlank(currencyCode) && currentAmount != null){
+			List<CurrencyType> lstCurrencyType = new List<CurrencyType>();
+			lstCurrencyType = [Select id,DecimalPlaces, ConversionRate,IsoCode From CurrencyType where IsoCode =:currencyCode limit 1];
+			if(!lstCurrencyType.isEmpty()){
+				decimal roundedAmount;
+				if(isGBPtoForeignCurrency){
+					convertedAmount = currentAmount*lstCurrencyType[0].ConversionRate;
+
+				}else{
+					convertedAmount = currentAmount/lstCurrencyType[0].ConversionRate;
+				}
+				roundedAmount = convertedAmount.setScale(3);
+				return roundedAmount;
+			}else{
+				return convertedAmount;
+			}
+		}else{
+			return convertedAmount;
+		}
+
+	}
+
+
+	public class booleanCostWrapper {
+		public Boolean isSelecteds {
+			get;
+			set;
+		}
+		public Disbursements__c objCost {
+			get;
+			set;
+		}
+
+		public booleanCostWrapper(boolean isSelects, Disbursements__c objCosts) {
+			objCost = objCosts;
+			isSelecteds = isSelects;
+
+		}
+
+
+
+	}
+
+	/**
+	*   Class Name: JobDetailsWrapper
+	*   Description: Wrapper for displaying Job Details
+	*/
+	public class JobDetailsWrapper{
+
+		public boolean hasMLR{get;set;}
+		public String  linkMLR{get;set;}
+		public String  nameMLR{get;set;}
+		public boolean hasPO{get;set;}
+		public boolean hasAccountId{get;set;}
+
+		public JobDetailsWrapper(){
+			linkMLR ='';
+			nameMLR ='';
+			hasMLR = false;
+			hasPO = false;
+			hasAccountId = false;
+		}
+	}
+
+
+	/**
+	*   Class Name: InvoiceDetailsWrapper
+	*   Description: Wrapper for displaying Invoice Details
+	*/
+	public class InvoiceDetailsWrapper{
+		public Invoice__c objInvoiceToDisplay{get;set;}
+		public boolean displayButtonGroup{get;set;}
+		public boolean displayInvoiceInformation{get;set;}
+		public decimal forecastFeeTotal{get;set;}
+		public decimal totalFeeLines{get;set;}
+		public decimal totalGrossAmount{get;set;}
+		public decimal totalGrossAmountNew{get;set;}
+
+		public boolean isApproved {get; set;}
+		public boolean isDraft {get; set;}
+		public boolean isFinal {get; set;}
+
+
+		public InvoiceDetailsWrapper(){
+			objInvoiceToDisplay = new Invoice__c();
+			displayButtonGroup = false;
+			displayInvoiceInformation = false;
+			forecastFeeTotal = 0.0;
+			totalFeeLines=0.0;
+			isDraft = false;
+			isApproved = false;
+			isFinal = false;
+		}
+	}
+
+	/**
+	*   Class Name: PurchaseOrderWrapper
+	*   Description: Wrapper for displaying Purchase Order Details
+	*/
+	public class PurchaseOrderWrapper {
+
+		public boolean isSelected {get; set;}
+		public boolean isDisabled {get; set;}
+		public boolean isCurrentContext {get; set;}
+		public integer index {get; set;}
+		public Purchase_Order__c objPurchaseOrder{get; set;}
+		public String strPOStatus{get;set;}
+		public List<SelectOption> lstStatusOption{get;set;}
+		transient  Schema.DescribeFieldResult fieldResultPOStatus =  Purchase_Order__c.PO_Status__c.getDescribe();
+		transient  List<Schema.PicklistEntry> lstSchemaPicklistPOStatus = fieldResultPOStatus.getPicklistValues();
+
+		public PurchaseOrderWrapper(boolean isSelect, Purchase_Order__c objPurchaseOrderToAdd, integer indexToAdd, boolean isCurrent) {
+			objPurchaseOrder = objPurchaseOrderToAdd;
+			isSelected = isSelect;
+			index = indexToAdd;
+			isCurrentContext = isCurrent;
+			isDisabled=false;
+			lstStatusOption = new List<SelectOption>();
+			//if(objPurchaseOrderToAdd.PO_Status__c != null){
+			strPOStatus = objPurchaseOrderToAdd.PO_Status__c;
+			//}
+			for(Schema.PicklistEntry objSchemaPicklistPOStatus : lstSchemaPicklistPOStatus){
+				if(objSchemaPicklistPOStatus.getValue() ==  'Complete' || objSchemaPicklistPOStatus.getValue() ==  'Original')
+				lstStatusOption.add(new SelectOption(objSchemaPicklistPOStatus.getLabel(), objSchemaPicklistPOStatus.getValue()));
+				else
+				lstStatusOption.add(new SelectOption(objSchemaPicklistPOStatus.getLabel(), objSchemaPicklistPOStatus.getValue(), true));
+			}
+		}
+		public PurchaseOrderWrapper(boolean isSelect, Purchase_Order__c objPurchaseOrderToAdd, integer indexToAdd, boolean isCurrent,boolean isDisabled) {
+			objPurchaseOrder = objPurchaseOrderToAdd;
+			isSelected = isSelect;
+			index = indexToAdd;
+			isCurrentContext = isCurrent;
+			this.isDisabled=isDisabled;
+			lstStatusOption = new List<SelectOption>();
+			//if(objPurchaseOrderToAdd.PO_Status__c != null){
+			strPOStatus = objPurchaseOrderToAdd.PO_Status__c;
+			//}
+			for(Schema.PicklistEntry objSchemaPicklistPOStatus : lstSchemaPicklistPOStatus){
+				if(objSchemaPicklistPOStatus.getValue() ==  'Complete' || objSchemaPicklistPOStatus.getValue() ==  'Original')
+				lstStatusOption.add(new SelectOption(objSchemaPicklistPOStatus.getLabel(), objSchemaPicklistPOStatus.getValue()));
+				else
+				lstStatusOption.add(new SelectOption(objSchemaPicklistPOStatus.getLabel(), objSchemaPicklistPOStatus.getValue(), true));
+			}
+		}
+	}
+
+
+	/**
+	*   Class Name: ForecastWrapper
+	*   Description: Wrapper for displaying Purchase Order Details
+	*/
+	public class ForecastWrapper {
+
+		public boolean isSelected {get; set;}
+		public integer index {get; set;}
+		public Forecasting__c objForecasting{get; set;}
+		public decimal forecastFeeAmount{get;set;}
+		public decimal OrginalFeeAmount{get;set;}
+		public decimal AccrualAmount{get;set;}
+
+		public ForecastWrapper(boolean isSelect, Forecasting__c objForeCastToAdd, integer indexToAdd, decimal forecastFee, decimal OrginalFee, decimal accrualFee) {
+			objForecasting = objForeCastToAdd;
+			isSelected = isSelect;
+			index = indexToAdd;
+			forecastFeeAmount = forecastFee;
+			OrginalFeeAmount = OrginalFee;
+			AccrualAmount=accrualFee;
+		}
+
+	}
+
+	/**
+	*   Class Name: ModalWrapper
+	*   Description: Wrapper for displaying Modals
+	*/
+	public class ModalWrapper {
+
+
+		public String modalMessage{get;set;}
+		public String saveMessage{get;set;}
+		public boolean displayerrorMessage {get; set;}
+		public boolean displayEngagementLetterModal {get; set;}
+		public boolean displayPOAmendModal {get; set;}
+		public boolean displayArchive {get; set;}
+		public boolean displayAssignNumberStep1{get;set;}
+		public boolean displayAssignNumberStep2{get;set;}
+		public boolean displayAssignNumberStep3{get;set;}
+
+		public ModalWrapper(){
+			displayerrorMessage = false;
+			modalMessage= '';
+			displayArchive = false;
+			displayPOAmendModal = false;
+			displayEngagementLetterModal = false;
+			displayAssignNumberStep1 = false;
+			displayAssignNumberStep2=false;
+			displayAssignNumberStep3 = false;
+
+		}
+
+		public ModalWrapper(String modalMessage){
+			this.modalMessage =modalMessage;
+			displayerrorMessage = true;
+			displayArchive = false;
+			displayPOAmendModal = false;
+			displayEngagementLetterModal = false;
+			displayAssignNumberStep1 = false;
+			displayAssignNumberStep2 = false;
+			displayAssignNumberStep3 = false;
+			saveMessage=null;
+
+		}
+		public ModalWrapper(string Variable, Boolean activatevar){
+			displayerrorMessage = false;
+			displayArchive = false;
+			displayPOAmendModal = false;
+			displayEngagementLetterModal = false;
+			displayAssignNumberStep1 = false;
+			displayAssignNumberStep2 = false;
+			displayAssignNumberStep3 = false;
+			if(activatevar){
+				if(Variable=='displayAssignNumberStep1')displayAssignNumberStep1=true;
+				if(Variable=='displayEngagementLetterModal')displayEngagementLetterModal=true;
+				if(Variable=='displayPOAmendModal')displayPOAmendModal=true;
+				if(Variable=='displayArchive')displayArchive=true;
+				if(Variable=='displayAssignNumberStep2')displayAssignNumberStep2=true;
+				if(Variable=='displayAssignNumberStep3')displayAssignNumberStep3=true;
+			}
+
+		}
+	}
+
+}
