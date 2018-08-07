@@ -11,7 +11,6 @@
 *  Hemant garg      27/09/2016            Orginal Version
 *  Anand M          17/11/2016            Changes for Fixes
 *  M Rizwan			13/10/2017			  Changes for "PDF Values" Tab
-*
 */
 global with sharing class CS_JobInvoiceController{
 
